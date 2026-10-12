@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var panel = document.createElement("aside");
     panel.id = "forja-preview-drawer";
     panel.setAttribute("aria-label", "Prévia do aplicativo");
-    panel.style.cssText = "position:absolute;top:0;right:0;width:min(780px,100%);height:100%;background:#FAF9F5;color:#20191D;box-shadow:-16px 0 50px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease;font:14px/1.45 system-ui,sans-serif";
+    panel.style.cssText = "position:absolute;top:0;right:0;width:min(1100px,100vw);max-width:100vw;height:100%;height:100dvh;max-height:100dvh;background:#FAF9F5;color:#20191D;box-shadow:-16px 0 50px rgba(0,0,0,.18);display:flex;flex-direction:column;min-height:0;transform:translateX(100%);transition:transform .22s ease;font:14px/1.45 system-ui,sans-serif;overflow:hidden";
     var header = document.createElement("header");
     header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:#fff;border-bottom:1px solid #E9DFD8";
     var titleWrap = document.createElement("div");
@@ -429,11 +429,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     header.append(titleWrap, close);
 
     var toolbar = document.createElement("div");
-    toolbar.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px;background:#fff;border-bottom:1px solid #E9DFD8";
+    toolbar.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#fff;border-bottom:1px solid #E9DFD8;flex-shrink:0;max-width:100%;box-sizing:border-box";
     var previewTab = button("Prévia", false);
     var codeTab = button("Código HTML", true);
     var copy = button("Copiar código", true);
     var download = button("Baixar HTML", false);
+    var desktopView = button("Desktop", true);
+    var mobileView = button("Celular", true);
     previewTab.addEventListener("click", function(){ showTab("preview"); });
     codeTab.addEventListener("click", function(){ showTab("code"); });
     copy.addEventListener("click", async function(){
@@ -461,7 +463,9 @@ document.addEventListener('DOMContentLoaded', async function() {
       a.remove();
       setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
     });
-    toolbar.append(previewTab, codeTab);
+    toolbar.append(previewTab, codeTab, desktopView, mobileView);
+    desktopView.addEventListener("click", function(){ setPreviewSize("desktop"); });
+    mobileView.addEventListener("click", function(){ setPreviewSize("mobile"); });
     var spacer = document.createElement("span");
     spacer.style.cssText = "flex:1";
     toolbar.append(spacer, copy, download);
@@ -492,29 +496,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     loaderWrap.append(mark,loaderTitle,loaderMessage,progressTrack,loaderHint);
     status.appendChild(loaderWrap);
     var loaderStyle = document.createElement("style");
-    loaderStyle.textContent = "@keyframes forja-progress{from{transform:translateX(-45%);width:38%}to{transform:translateX(165%);width:58%}}@media(max-width:560px){#forja-preview-status{margin:10px;padding:20px;min-height:220px}}";
+    loaderStyle.textContent = "@keyframes forja-progress{from{transform:translateX(-45%);width:38%}to{transform:translateX(165%);width:58%}}@media(max-width:560px){#forja-preview-status{margin:8px;padding:16px;min-height:180px}#forja-preview-drawer header{padding:12px}#forja-preview-drawer header div{max-width:58vw}#forja-preview-drawer header div div:first-child{font-size:16px}#forja-preview-drawer button{font-size:12px;padding:8px 9px}#forja-preview-drawer textarea{margin:8px;width:calc(100% - 16px)}}";
     document.head.appendChild(loaderStyle);
     var frame = document.createElement("iframe");
     frame.id = "forja-preview-frame";
     frame.title = "Prévia interativa do aplicativo gerado";
     frame.setAttribute("sandbox", "allow-scripts allow-forms");
-    frame.style.cssText = "display:none;flex:1;min-height:0;width:100%;border:0;background:#fff";
+    frame.style.cssText = "display:none;flex:1 1 auto;min-height:0;min-width:0;width:100%;max-width:none;height:100%;border:0;background:#fff;transition:width .18s ease;box-shadow:0 2px 16px rgba(25,18,20,.08)";
+    var previewStage = document.createElement("div");
+    previewStage.id = "forja-preview-stage";
+    previewStage.style.cssText = "display:none;flex:1 1 auto;min-height:0;min-width:0;width:100%;overflow:auto;background:#eee9e6;box-sizing:border-box;padding:0;align-items:stretch;justify-content:center";
+    previewStage.appendChild(frame);
     var codeArea = document.createElement("textarea");
     codeArea.id = "forja-preview-code";
     codeArea.readOnly = true;
     codeArea.setAttribute("aria-label", "Código HTML gerado");
     codeArea.style.cssText = "display:none;flex:1;min-height:0;width:calc(100% - 32px);margin:16px;padding:14px;box-sizing:border-box;resize:none;border:1px solid #E9DFD8;border-radius:12px;background:#20191D;color:#F9F3F5;font:12px/1.5 ui-monospace,SFMono-Regular,monospace;white-space:pre;overflow:auto";
-    panel.append(header, toolbar, status, frame, codeArea);
+    panel.append(header, toolbar, status, previewStage, codeArea);
     frame.addEventListener("load", function(){
       if (!drawer || drawer.frame !== frame || !drawer.isRendering) return;
       drawer.isRendering = false;
       drawer.status.style.display = activeTab === "preview" ? "none" : "flex";
-      if (activeTab === "preview") frame.style.display = "block";
+      if (activeTab === "preview") { drawer.previewStage.style.display = "flex"; frame.style.display = "block"; }
     });
     overlay.appendChild(panel);
     overlay.addEventListener("click", function(e){ if(e.target === overlay) closeDrawer(); });
     document.body.appendChild(overlay);
-    drawer = {overlay:overlay,panel:panel,status:status,frame:frame,codeArea:codeArea,previewTab:previewTab,codeTab:codeTab,isRendering:false,statusMessage:loaderMessage};
+    drawer = {overlay:overlay,panel:panel,status:status,frame:frame,previewStage:previewStage,codeArea:codeArea,previewTab:previewTab,codeTab:codeTab,desktopView:desktopView,mobileView:mobileView,previewSize:"desktop",isRendering:false,statusMessage:loaderMessage};
+    setPreviewSize("desktop");
     return drawer;
   }
 
@@ -532,11 +541,32 @@ document.addEventListener('DOMContentLoaded', async function() {
     drawer.panel.style.transform = "translateX(100%)";
     setTimeout(function(){ if(drawer) drawer.overlay.style.display = "none"; }, 240);
   }
+  function setPreviewSize(size) {
+    if (!drawer) return;
+    drawer.previewSize = size;
+    var mobile = size === "mobile";
+    drawer.previewStage.style.padding = mobile ? "14px 8px" : "0";
+    drawer.previewStage.style.alignItems = mobile ? "flex-start" : "stretch";
+    drawer.frame.style.width = mobile ? "390px" : "100%";
+    drawer.frame.style.maxWidth = mobile ? "100%" : "none";
+    drawer.frame.style.minHeight = mobile ? "min(844px,100%)" : "0";
+    drawer.frame.style.height = "100%";
+    drawer.frame.style.borderRadius = mobile ? "22px" : "0";
+    drawer.frame.style.border = mobile ? "1px solid #d4c8c2" : "0";
+    drawer.desktopView.style.background = mobile ? "#fff" : "#C93F12";
+    drawer.desktopView.style.color = mobile ? "#30252B" : "#fff";
+    drawer.desktopView.style.borderColor = mobile ? "#E8DCD6" : "#C93F12";
+    drawer.mobileView.style.background = mobile ? "#C93F12" : "#fff";
+    drawer.mobileView.style.color = mobile ? "#fff" : "#30252B";
+    drawer.mobileView.style.borderColor = mobile ? "#C93F12" : "#E8DCD6";
+  }
+
   function showTab(tab) {
     activeTab = tab;
     if (!drawer) return;
     var isPreview = tab === "preview";
     drawer.frame.style.display = isPreview && !drawer.isRendering ? "block" : "none";
+    drawer.previewStage.style.display = isPreview && !drawer.isRendering ? "flex" : "none";
     drawer.codeArea.style.display = isPreview ? "none" : "block";
     drawer.status.style.display = (generatedCode && !drawer.isRendering) ? "none" : "flex";
     drawer.previewTab.style.background = isPreview ? "#C93F12" : "#fff";
@@ -569,6 +599,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     d.status.style.color = "#f8f3f4";
     d.statusMessage.textContent = "Entendendo sua descrição e preparando a estrutura do projeto…";
     d.frame.style.display = "none";
+    d.previewStage.style.display = "none";
     d.codeArea.value = "";
     d.codeArea.style.display = "none";
     showTab("preview");
