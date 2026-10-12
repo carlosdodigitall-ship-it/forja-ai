@@ -663,6 +663,14 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (typeof generatedCode !== "string" || !generatedCode.trim()) throw new Error("A IA terminou sem retornar código HTML. Tente novamente.");
       d.statusMessage.textContent = "Código pronto. Renderizando a prévia interativa…";
       d.codeArea.value = generatedCode;
+      if (window.forjaFirebase && typeof window.forjaFirebase.saveProject === "function") {
+        try {
+          await window.forjaFirebase.saveProject({prompt:prompt, code:generatedCode, title:prompt.slice(0, 100)});
+          console.info("Projeto salvo no Firebase Firestore.");
+        } catch (firebaseError) {
+          console.warn("A prévia foi gerada, mas não foi possível salvar no Firebase. Confira Authentication anônima e regras do Firestore.", firebaseError);
+        }
+      }
       d.isRendering = true;
       d.frame.style.display = "none";
       d.status.style.display = "flex";
@@ -697,6 +705,53 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (event.key === "Escape") closeDrawer();
   });
 })();
+</script>
+
+
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+  import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-analytics.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBNcNmfLw67lNQOjfsusFAPFvP8Fg6CEU",
+    authDomain: "forja-d4aef.firebaseapp.com",
+    projectId: "forja-d4aef",
+    storageBucket: "forja-d4aef.firebasestorage.app",
+    messagingSenderId: "138172497867",
+    appId: "1:138172497867:web:b468a0f80c329d6877c04e",
+    measurementId: "G-NSEY7EBB7M"
+  };
+
+  try {
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    if (await isSupported()) {
+      try { getAnalytics(app); } catch (analyticsError) { console.warn("Firebase Analytics indisponível:", analyticsError); }
+    }
+
+    const authReady = signInAnonymously(auth);
+    window.forjaFirebase = {
+      projectId: firebaseConfig.projectId,
+      ready: authReady,
+      saveProject: async function(project) {
+        const credential = await authReady;
+        return addDoc(collection(db, "projects"), {
+          userId: credential.user.uid,
+          prompt: String(project.prompt || "").slice(0, 12000),
+          code: String(project.code || ""),
+          title: String(project.title || "Projeto sem título").slice(0, 180),
+          createdAt: serverTimestamp()
+        });
+      }
+    };
+    authReady.then(() => console.info("Firebase Authentication inicializado."))
+      .catch(error => console.error("Firebase Authentication não configurado:", error));
+  } catch (error) {
+    console.error("Falha ao inicializar Firebase:", error);
+  }
 </script>
 
 </body>
