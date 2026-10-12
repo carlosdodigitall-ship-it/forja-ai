@@ -1268,6 +1268,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       try {
         var result = await api("connect", "POST", {provider:p.id, credentials:credentials});
         connected[p.id] = {provider:p.id,status:"connected",accountLabel:result.accountLabel || p.name};
+        window.dispatchEvent(new CustomEvent("forja:integrations-updated"));
         closeModal();
         render();
       } catch (error) {
@@ -1291,6 +1292,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
       await api("disconnect", "POST", {provider:id});
       delete connected[id];
+      window.dispatchEvent(new CustomEvent("forja:integrations-updated"));
       render();
     } catch (error) {
       window.alert(error.message);
@@ -1386,7 +1388,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     select.id = "forja-ai-provider-select";
     select.style.cssText = "max-width:100%;border:1px solid #e4d3c8;border-radius:9px;padding:8px 10px;background:#fffaf7;color:#382820;font:inherit;font-weight:700";
     select.innerHTML = '<option value="auto">Automático — usar IA conectada</option>';
-    select.value = safeText(localStorage.getItem(selectionKey) || "auto");
     select.addEventListener("change", function () {
       activeProvider = select.value || "auto";
       try { localStorage.setItem(selectionKey, activeProvider); } catch (_) {}
@@ -1411,7 +1412,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         {id:"groq",name:"Groq"},
         {id:"openrouter",name:"OpenRouter"}
       ];
-      var saved = select.value || "auto";
+      var saved = select.value || safeText(localStorage.getItem(selectionKey) || "auto");
       select.innerHTML = '<option value="auto">Automático — usar IA conectada</option>';
       list.forEach(function (p) {
         if (!data[p.id]) return;
@@ -1441,6 +1442,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         var body = {};
         try { body = JSON.parse(options.body || "{}"); } catch (_) {}
         var select = document.getElementById("forja-ai-provider-select");
+        if (select) await refreshOptions(select);
         body.provider = select && select.value ? select.value : (activeProvider || "auto");
         if (user) {
           try { headers.set("Authorization","Bearer "+await user.getIdToken()); } catch (_) {}
