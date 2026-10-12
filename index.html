@@ -1301,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   function setActiveLink(targetName) {
     if (!root) return;
-    root.querySelectorAll("nav a").forEach(function (a) {
+    root.querySelectorAll("a").forEach(function (a) {
       var match = a.textContent.trim() === targetName;
       a.style.background = match ? "#fff" : "transparent";
       a.style.border = match ? "1px solid #E9DFD8" : "1px solid transparent";
@@ -1341,7 +1341,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     main = root.querySelector("main");
     if (!main) return false;
     homeMarkup = main.innerHTML;
-    root.querySelectorAll("nav a").forEach(function (a) {
+    root.querySelectorAll("a").forEach(function (a) {
       var name = a.textContent.trim();
       if (name === "Integrações") {
         a.addEventListener("click", function (event) { event.preventDefault(); openIntegrations(); });
@@ -1354,7 +1354,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   function handleNavigationClick(event) {
     var target = event.target && (event.target.nodeType === 1 ? event.target : event.target.parentElement);
-    var link = target && target.closest ? target.closest("nav a") : null;
+    var link = target && target.closest ? target.closest("a") : null;
     if (!link) return;
     var name = (link.textContent || "").replace(/\\s+/g, " ").trim();
     if (name !== "Integrações" && name !== "Início") return;
