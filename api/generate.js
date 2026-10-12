@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
   res.flushHeaders && res.flushHeaders();
 
   function send(event) {
-    res.write("data: " + JSON.stringify(event) + "\\n\\n");
+    res.write("data: " + JSON.stringify(event) + "\n\n");
   }
 
   let rawBuffer = "";
@@ -84,10 +84,10 @@ module.exports = async function handler(req, res) {
       const part = await reader.read();
       done = part.done;
       rawBuffer += decoder.decode(part.value || new Uint8Array(), { stream: !done });
-      const blocks = rawBuffer.split("\\n\\n");
+      const blocks = rawBuffer.split("\n\n");
       rawBuffer = blocks.pop() || "";
       for (const block of blocks) {
-        const dataLine = block.split("\\n").find(line => line.startsWith("data:"));
+        const dataLine = block.split("\n").find(line => line.startsWith("data:"));
         if (!dataLine) continue;
         let chunk;
         try { chunk = JSON.parse(dataLine.slice(5).trim()); } catch (e) { continue; }
@@ -106,15 +106,15 @@ module.exports = async function handler(req, res) {
     }
 
     generated = generated
-      .replace(/^\u0060{3}(?:html)?\\s*/i, "")
-      .replace(/\\s*\u0060{3}$/, "")
+      .replace(/^\u0060{3}(?:html)?\s*/i, "")
+      .replace(/\s*\u0060{3}$/, "")
       .trim();
     if (!generated) {
       send({ type: "error", error: "O Gemini não retornou código HTML. Tente novamente." });
       return res.end();
     }
-    if (!/<!doctype html|<html[\\s>]/i.test(generated)) {
-      generated = "<!doctype html>\\n<html lang=\"pt-BR\">\\n<head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Aplicativo Forja AI</title></head>\\n<body>\\n" + generated + "\\n</body>\\n</html>";
+    if (!/<!doctype html|<html[\s>]/i.test(generated)) {
+      generated = "<!doctype html>\n<html lang=\"pt-BR\">\n<head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Aplicativo Forja AI</title></head>\n<body>\n" + generated + "\n</body>\n</html>";
     }
     send({ type: "done", code: generated, model: model });
     return res.end();
