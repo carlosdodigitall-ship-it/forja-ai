@@ -108,19 +108,36 @@ async function verifyFirebaseIdToken(idToken) {
     }
   }
 
-  const certificate = firebaseCertificates && firebaseCertificates[header.kid];
+  let certificate = firebaseCertificates && firebaseCertificates[header.kid];
   if (!certificate) {
-    firebaseCertificates = null;
-    firebaseCertificatesExpiresAt = 0;
+    // Refresh certificates once when Google rotates signing keys; never recurse indefinitely.
     try {
-      await verifyFirebaseIdToken(idToken);
-      return claims;
-    } catch (_) { throw unauthorized(); }
+      const response = await fetch("https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com", {
+        signal: AbortSignal.timeout(8000),
+        headers: { "Accept": "application/json" }
+      });
+      if (!response.ok) throw new Error("Unable to refresh Firebase verification certificates");
+      const freshCertificates = await response.json();
+      const cacheControl = response.headers.get("cache-control") || "";
+      const match = cacheControl.match(/max-age=(\\d+)/i);
+      const maxAgeSeconds = match ? Math.max(60, Math.min(Number(match[1]), 21600)) : 300;
+      firebaseCertificates = freshCertificates;
+      firebaseCertificatesExpiresAt = Date.now() + maxAgeSeconds * 1000;
+      certificate = freshCertificates[header.kid];
+    } catch (_) {
+      const e = new Error("Não foi possível atualizar a validação da sessão. Tente novamente em instantes.");
+      e.status = 503;
+      throw e;
+    }
+    if (!certificate) throw unauthorized();
   }
+  let publicKey;
+  try { publicKey = crypto.createPublicKey(certificate); }
+  catch (_) { throw unauthorized(); }
   const verified = crypto.verify(
     "RSA-SHA256",
     Buffer.from(parts[0] + "." + parts[1], "utf8"),
-    certificate,
+    publicKey,
     signature
   );
   if (!verified) throw unauthorized();
