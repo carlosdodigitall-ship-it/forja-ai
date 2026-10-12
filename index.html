@@ -1352,7 +1352,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.addEventListener("keydown", function (event) { if (event.key === "Escape") closeModal(); });
     return true;
   }
+  function handleNavigationClick(event) {
+    var target = event.target && (event.target.nodeType === 1 ? event.target : event.target.parentElement);
+    var link = target && target.closest ? target.closest("nav a") : null;
+    if (!link) return;
+    var name = (link.textContent || "").replace(/\\s+/g, " ").trim();
+    if (name !== "Integrações" && name !== "Início") return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+    if (!main) attach();
+    if (name === "Integrações") openIntegrations();
+    else openHome();
+  }
   function start() {
+    // Delegação em capture: continua funcionando mesmo se o dashboard recriar o menu.
+    document.addEventListener("click", handleNavigationClick, true);
     if (attach()) return;
     var observer = new MutationObserver(function () {
       if (attach()) observer.disconnect();
