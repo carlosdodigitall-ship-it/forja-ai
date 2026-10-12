@@ -1361,7 +1361,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     event.preventDefault();
     event.stopPropagation();
     if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+
+    // Resolve o painel a partir do menu clicado, não do primeiro painel encontrado na página.
+    var clickedRoot = link.closest('[data-document-role="page"]');
+    if (clickedRoot) {
+      var clickedMain = clickedRoot.querySelector("main");
+      if (clickedMain) {
+        if (clickedMain !== main) {
+          root = clickedRoot;
+          main = clickedMain;
+          if (!main.dataset.forjaHomeCaptured) {
+            homeMarkup = main.innerHTML;
+            main.dataset.forjaHomeCaptured = "true";
+          }
+        } else {
+          root = clickedRoot;
+        }
+      }
+    }
     if (!main) attach();
+    if (!main) {
+      console.error("[Forja AI] Não foi possível localizar o painel principal para abrir Integrações.");
+      return;
+    }
     if (name === "Integrações") openIntegrations();
     else openHome();
   }
