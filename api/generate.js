@@ -27,49 +27,99 @@ module.exports = async function handler(req, res) {
     "Não inclua segredos, chaves API ou credenciais no HTML gerado."
   ].join(" ");
 
-  try {
-    const upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.35,
-          maxOutputTokens: 8192,
-          responseMimeType: "text/plain"
-        }
-      })
-    });
+  // Tenta o modelo principal primeiro e usa modelos alternativos se houver
+  // sobrecarga temporária ou indisponibilidade do serviço/modelo.
+  const models = [
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite"
+  ];
+  let lastDetail = "";
+  let lastStatus = 0;
 
-    const payload = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) {
-      const detail = payload && payload.error && payload.error.message;
-      const status = upstream.status === 429 ? 429 : (upstream.status >= 400 && upstream.status < 500 ? 400 : 502);
-      return res.status(status).json({
-        error: upstream.status === 429
-          ? "O limite de uso da API Gemini foi atingido. Aguarde e tente novamente ou confira as cotas do seu projeto."
-          : "O Google Gemini não conseguiu gerar o aplicativo." + (detail ? " Detalhe: " + detail : "")
+  try {
+    for (let i = 0; i < models.length; i++) {
+      const model = models[i];
+      let upstream;
+      let payload = {};
+
+      try {
+        upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.35,
+              maxOutputTokens: 8192,
+              responseMimeType: "text/plain"
+            }
+          })
+        });
+        payload = await upstream.json().catch(() => ({}));
+      } catch (networkError) {
+        lastDetail = "Não foi possível conectar ao serviço do Google.";
+        lastStatus = 503;
+        continue;
+      }
+
+      if (!upstream.ok) {
+        lastStatus = upstream.status;
+        lastDetail = payload && payload.error && payload.error.message
+          ? payload.error.message
+          : "O serviço retornou HTTP " + upstream.status + ".";
+
+        // Erros de autenticação ou requisição não são corrigidos trocando o modelo.
+        // Limite, sobrecarga e indisponibilidade podem ser temporários; tenta o próximo.
+        if (![408, 429, 500, 502, 503, 504].includes(upstream.status)) {
+          const status = upstream.status === 401 || upstream.status === 403 ? 502 : 400;
+          return res.status(status).json({
+            error: upstream.status === 429
+              ? "O limite de uso da API Gemini foi atingido. Confira as cotas e o faturamento do projeto Google AI Studio."
+              : "O Google Gemini recusou a solicitação. " + lastDetail
+          });
+        }
+        continue;
+      }
+
+      const candidate = payload.candidates && payload.candidates[0];
+      const parts = candidate && candidate.content && candidate.content.parts;
+      let generated = Array.isArray(parts)
+        ? parts.map(function (part) { return part.text || ""; }).join("\n").trim()
+        : "";
+
+      generated = generated
+        .replace(new RegExp("^" + String.fromCharCode(96).repeat(3) + "(?:html)?\\s*", "i"), "")
+        .replace(new RegExp("\\s*" + String.fromCharCode(96).repeat(3) + "$"), "")
+        .trim();
+
+      if (!generated) {
+        lastDetail = "O modelo " + model + " não retornou código.";
+        lastStatus = 502;
+        continue;
+      }
+
+      if (!/<!doctype html|<html[\s>]/i.test(generated)) {
+        generated = "<!doctype html>\n<html lang=\"pt-BR\">\n<head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Aplicativo Forja AI</title></head>\n<body>\n" + generated + "\n</body>\n</html>";
+      }
+
+      return res.status(200).json({ code: generated, model: model });
+    }
+
+    if (lastStatus === 429) {
+      return res.status(429).json({
+        error: "Os modelos Gemini estão no limite de capacidade ou de cota neste momento. Aguarde alguns minutos e tente novamente. " + lastDetail
       });
     }
 
-    const candidate = payload.candidates && payload.candidates[0];
-    const parts = candidate && candidate.content && candidate.content.parts;
-    let generated = Array.isArray(parts) ? parts.map(function (part) { return part.text || ""; }).join("\n").trim() : "";
-    generated = generated.replace(new RegExp("^" + String.fromCharCode(96).repeat(3) + "(?:html)?\\s*", "i"), "").replace(new RegExp("\\s*" + String.fromCharCode(96).repeat(3) + "$"), "").trim();
-
-    if (!generated) {
-      return res.status(502).json({ error: "O Gemini não retornou código. Tente descrever o aplicativo com mais detalhes." });
-    }
-    if (!/<!doctype html|<html[\s>]/i.test(generated)) {
-      generated = "<!doctype html>\n<html lang=\"pt-BR\">\n<head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Aplicativo Forja AI</title></head>\n<body>\n" + generated + "\n</body>\n</html>";
-    }
-
-    return res.status(200).json({ code: generated, model: "gemini-3.8-flash" });
+    return res.status(502).json({
+      error: "A Forja AI tentou mais de um modelo Gemini, mas nenhum conseguiu gerar o aplicativo. Tente novamente em alguns minutos. Detalhe: " + lastDetail
+    });
   } catch (error) {
-    return res.status(500).json({ error: "Falha ao conectar com o Google Gemini. Verifique a conexão e tente novamente." });
+    return res.status(500).json({ error: "Falha inesperada ao gerar o aplicativo. Tente novamente." });
   }
 };
