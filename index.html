@@ -393,22 +393,136 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (window.__forjaGeminiIntegrationInstalled) return;
   window.__forjaGeminiIntegrationInstalled = true;
 
-  function makeButton(label) {
-    var button = document.createElement("button");
-    button.type = "button";
-    button.textContent = label;
-    button.style.cssText = "border:0;border-radius:10px;padding:10px 14px;background:#C93F12;color:white;font:600 14px system-ui;cursor:pointer";
-    return button;
+  var generatedCode = "";
+  var activeTab = "preview";
+  var drawer;
+
+  function button(label, secondary) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.style.cssText = "border:1px solid " + (secondary ? "#E8DCD6" : "#C93F12") + ";border-radius:10px;padding:10px 13px;background:" + (secondary ? "#fff" : "#C93F12") + ";color:" + (secondary ? "#30252B" : "#fff") + ";font:600 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap";
+    return b;
   }
 
-  document.addEventListener("click", async function (event) {
-    var trigger = event.target && event.target.closest ? event.target.closest('button[aria-label="Criar projeto"]') : null;
-    if (!trigger) return;
+  function createDrawer() {
+    var overlay = document.createElement("div");
+    overlay.id = "forja-preview-overlay";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:2147483000;background:rgba(20,13,16,.48);opacity:0;transition:opacity .18s ease";
+    var panel = document.createElement("aside");
+    panel.id = "forja-preview-drawer";
+    panel.setAttribute("aria-label", "Prévia do aplicativo");
+    panel.style.cssText = "position:absolute;top:0;right:0;width:min(780px,100%);height:100%;background:#FAF9F5;color:#20191D;box-shadow:-16px 0 50px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease;font:14px/1.45 system-ui,sans-serif";
+    var header = document.createElement("header");
+    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:#fff;border-bottom:1px solid #E9DFD8";
+    var titleWrap = document.createElement("div");
+    var title = document.createElement("div");
+    title.textContent = "Seu aplicativo";
+    title.style.cssText = "font-size:18px;font-weight:800;letter-spacing:-.02em";
+    var subtitle = document.createElement("div");
+    subtitle.textContent = "Prévia gerada pela Forja AI";
+    subtitle.style.cssText = "font-size:12px;color:#77676E;margin-top:3px";
+    titleWrap.append(title, subtitle);
+    var close = button("Fechar", true);
+    close.setAttribute("aria-label", "Fechar prévia");
+    close.addEventListener("click", closeDrawer);
+    header.append(titleWrap, close);
 
+    var toolbar = document.createElement("div");
+    toolbar.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px;background:#fff;border-bottom:1px solid #E9DFD8";
+    var previewTab = button("Prévia", false);
+    var codeTab = button("Código HTML", true);
+    var copy = button("Copiar código", true);
+    var download = button("Baixar HTML", false);
+    previewTab.addEventListener("click", function(){ showTab("preview"); });
+    codeTab.addEventListener("click", function(){ showTab("code"); });
+    copy.addEventListener("click", async function(){
+      if (!generatedCode) return;
+      try {
+        await navigator.clipboard.writeText(generatedCode);
+        copy.textContent = "Copiado!";
+        setTimeout(function(){ copy.textContent = "Copiar código"; }, 1800);
+      } catch(e) {
+        showTab("code");
+        codeArea.focus();
+        codeArea.select();
+        codeArea.setAttribute("aria-label", "Selecione e copie o código HTML");
+      }
+    });
+    download.addEventListener("click", function(){
+      if (!generatedCode) return;
+      var blob = new Blob([generatedCode], {type:"text/html;charset=utf-8"});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "forja-ai-app.html";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    });
+    toolbar.append(previewTab, codeTab);
+    var spacer = document.createElement("span");
+    spacer.style.cssText = "flex:1";
+    toolbar.append(spacer, copy, download);
+
+    var status = document.createElement("div");
+    status.id = "forja-preview-status";
+    status.style.cssText = "margin:16px;padding:18px;background:#fff;border:1px solid #E9DFD8;border-radius:14px;color:#6B5D63";
+    status.textContent = "Descreva o aplicativo no campo principal e clique na seta para cima para começar.";
+    var frame = document.createElement("iframe");
+    frame.id = "forja-preview-frame";
+    frame.title = "Prévia interativa do aplicativo gerado";
+    frame.setAttribute("sandbox", "allow-scripts allow-forms");
+    frame.style.cssText = "display:none;flex:1;min-height:0;width:100%;border:0;background:#fff";
+    var codeArea = document.createElement("textarea");
+    codeArea.id = "forja-preview-code";
+    codeArea.readOnly = true;
+    codeArea.setAttribute("aria-label", "Código HTML gerado");
+    codeArea.style.cssText = "display:none;flex:1;min-height:0;width:calc(100% - 32px);margin:16px;padding:14px;box-sizing:border-box;resize:none;border:1px solid #E9DFD8;border-radius:12px;background:#20191D;color:#F9F3F5;font:12px/1.5 ui-monospace,SFMono-Regular,monospace;white-space:pre;overflow:auto";
+    panel.append(header, toolbar, status, frame, codeArea);
+    overlay.appendChild(panel);
+    overlay.addEventListener("click", function(e){ if(e.target === overlay) closeDrawer(); });
+    document.body.appendChild(overlay);
+    drawer = {overlay:overlay,panel:panel,status:status,frame:frame,codeArea:codeArea,previewTab:previewTab,codeTab:codeTab};
+    return drawer;
+  }
+
+  function openDrawer() {
+    var d = drawer || createDrawer();
+    d.overlay.style.display = "block";
+    requestAnimationFrame(function(){
+      d.overlay.style.opacity = "1";
+      d.panel.style.transform = "translateX(0)";
+    });
+  }
+  function closeDrawer() {
+    if (!drawer) return;
+    drawer.overlay.style.opacity = "0";
+    drawer.panel.style.transform = "translateX(100%)";
+    setTimeout(function(){ if(drawer) drawer.overlay.style.display = "none"; }, 240);
+  }
+  function showTab(tab) {
+    activeTab = tab;
+    if (!drawer) return;
+    var isPreview = tab === "preview";
+    drawer.frame.style.display = isPreview ? "block" : "none";
+    drawer.codeArea.style.display = isPreview ? "none" : "block";
+    drawer.status.style.display = generatedCode ? "none" : "block";
+    drawer.previewTab.style.background = isPreview ? "#C93F12" : "#fff";
+    drawer.previewTab.style.color = isPreview ? "#fff" : "#30252B";
+    drawer.previewTab.style.borderColor = isPreview ? "#C93F12" : "#E8DCD6";
+    drawer.codeTab.style.background = isPreview ? "#fff" : "#C93F12";
+    drawer.codeTab.style.color = isPreview ? "#30252B" : "#fff";
+    drawer.codeTab.style.borderColor = isPreview ? "#E8DCD6" : "#C93F12";
+  }
+
+  async function generate(trigger) {
     var textarea = document.querySelector('textarea[aria-label="Descreva seu app"]');
-    if (!textarea) return;
-    event.preventDefault();
-
+    if (!textarea) {
+      alert("Não encontrei o campo de descrição. Atualize a página e tente novamente.");
+      return;
+    }
     var prompt = textarea.value.trim();
     if (!prompt) {
       textarea.focus();
@@ -417,93 +531,56 @@ document.addEventListener('DOMContentLoaded', async function() {
       return;
     }
 
-    var anchor = textarea.parentElement && textarea.parentElement.parentElement;
-    if (!anchor || !anchor.parentNode) return;
-
-    var panel = document.getElementById("forja-gemini-result");
-    if (!panel) {
-      panel = document.createElement("section");
-      panel.id = "forja-gemini-result";
-      panel.style.cssText = "box-sizing:border-box;width:100%;max-width:760px;margin:18px auto 0;padding:18px;background:#fff;border:1px solid #E9DFD8;border-radius:18px;box-shadow:0 8px 30px rgba(28,20,23,.07);color:#1C1417;font:14px/1.5 system-ui,sans-serif";
-      anchor.insertAdjacentElement("afterend", panel);
-    }
-    panel.replaceChildren();
-    var heading = document.createElement("h2");
-    heading.textContent = "Forja AI está criando seu aplicativo";
-    heading.style.cssText = "font-size:20px;margin:0 0 8px";
-    var status = document.createElement("p");
-    status.textContent = "Conectando ao Google Gemini… isso pode levar alguns instantes.";
-    status.style.cssText = "margin:0;color:#6B5D63";
-    panel.append(heading, status);
+    openDrawer();
+    var d = drawer || createDrawer();
+    d.status.style.display = "block";
+    d.status.style.color = "#6B5D63";
+    d.status.textContent = "Criando seu aplicativo com IA… Se o modelo principal estiver ocupado, a Forja AI tentará alternativas.";
+    d.frame.style.display = "none";
+    d.codeArea.style.display = "none";
     trigger.disabled = true;
-    trigger.style.opacity = "0.6";
+    trigger.style.opacity = ".55";
+    trigger.setAttribute("aria-busy", "true");
 
     try {
       var response = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt })
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({prompt:prompt})
       });
-      var data = await response.json().catch(function () { return {}; });
+      var data = await response.json().catch(function(){ return {}; });
       if (!response.ok) throw new Error(data.error || "Não foi possível gerar o aplicativo. Tente novamente.");
-
-      panel.replaceChildren();
-      heading.textContent = "Seu aplicativo está pronto para visualizar";
-      var description = document.createElement("p");
-      description.textContent = "A prévia abaixo é gerada pelo Gemini. Revise o código antes de publicar ou inserir dados reais.";
-      description.style.cssText = "margin:0 0 14px;color:#6B5D63";
-      var actions = document.createElement("div");
-      actions.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px";
-      var copyButton = makeButton("Copiar código");
-      var downloadButton = makeButton("Baixar HTML");
-      downloadButton.style.background = "#30252B";
-      var preview = document.createElement("iframe");
-      preview.title = "Prévia do aplicativo criado pela Forja AI";
-      preview.setAttribute("sandbox", "allow-scripts allow-forms");
-      preview.style.cssText = "display:block;width:100%;height:560px;border:1px solid #E9DFD8;border-radius:12px;background:#fff";
-      preview.srcdoc = data.code;
-      var details = document.createElement("details");
-      details.style.cssText = "margin-top:14px";
-      var summary = document.createElement("summary");
-      summary.textContent = "Ver código HTML";
-      summary.style.cssText = "cursor:pointer;font-weight:700;padding:8px 0";
-      var code = document.createElement("pre");
-      code.textContent = data.code;
-      code.style.cssText = "white-space:pre-wrap;overflow:auto;max-height:420px;background:#20191D;color:#F9F3F5;padding:14px;border-radius:10px;font:12px/1.5 ui-monospace,monospace";
-      copyButton.addEventListener("click", async function () {
-        try {
-          await navigator.clipboard.writeText(data.code);
-          copyButton.textContent = "Código copiado!";
-        } catch (e) {
-          summary.textContent = "Abra “Ver código HTML” e copie o código manualmente";
-          details.open = true;
-        }
-      });
-      downloadButton.addEventListener("click", function () {
-        var blob = new Blob([data.code], { type: "text/html;charset=utf-8" });
-        var url = URL.createObjectURL(blob);
-        var link = document.createElement("a");
-        link.href = url;
-        link.download = "forja-ai-app.html";
-        link.click();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-      });
-      actions.append(copyButton, downloadButton);
-      details.append(summary, code);
-      panel.append(heading, description, actions, preview, details);
+      if (typeof data.code !== "string" || !data.code.trim()) throw new Error("A IA respondeu sem código HTML. Tente novamente.");
+      generatedCode = data.code;
+      d.frame.srcdoc = generatedCode;
+      d.codeArea.value = generatedCode;
+      d.status.style.display = "none";
+      showTab(activeTab || "preview");
     } catch (error) {
-      panel.replaceChildren();
-      var errorTitle = document.createElement("h2");
-      errorTitle.textContent = "Não foi possível gerar o aplicativo";
-      errorTitle.style.cssText = "font-size:20px;margin:0 0 8px";
-      var errorText = document.createElement("p");
-      errorText.textContent = error && error.message ? error.message : "Erro inesperado. Tente novamente.";
-      errorText.style.cssText = "margin:0;color:#9C2F0A";
-      panel.append(errorTitle, errorText);
+      d.status.style.display = "block";
+      d.status.style.color = "#9C2F0A";
+      d.status.textContent = (error && error.message ? error.message : "Ocorreu um erro inesperado.") + " Você pode tentar novamente clicando na seta para cima.";
     } finally {
       trigger.disabled = false;
       trigger.style.opacity = "1";
+      trigger.removeAttribute("aria-busy");
     }
+  }
+
+  // O dashboard é montado pelo carregador após a página inicial. Ouvimos no
+  // window em fase de captura para que a troca do documento não remova o handler.
+  window.addEventListener("click", function(event) {
+    var target = event.target;
+    if (!target || !target.closest) return;
+    var trigger = target.closest('button[aria-label="Criar projeto"]');
+    if (!trigger) return;
+    event.preventDefault();
+    event.stopPropagation();
+    generate(trigger);
+  }, true);
+
+  window.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") closeDrawer();
   });
 })();
 </script>
