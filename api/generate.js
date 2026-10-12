@@ -27,13 +27,9 @@ module.exports = async function handler(req, res) {
     "Não inclua segredos, chaves API ou credenciais no HTML gerado."
   ].join(" ");
 
-  // Tenta o modelo principal primeiro e usa modelos alternativos se houver
-  // sobrecarga temporária ou indisponibilidade do serviço/modelo.
-  const models = [
-    "gemini-3.8-flash",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite"
-  ];
+  // Usa apenas o modelo atualmente recomendado para novos usuários.
+  // Modelos Gemini 2.5 podem não estar disponíveis para novas contas.
+  const models = ["gemini-3.8-flash"];
   let lastDetail = "";
   let lastStatus = 0;
 
@@ -73,8 +69,7 @@ module.exports = async function handler(req, res) {
           ? payload.error.message
           : "O serviço retornou HTTP " + upstream.status + ".";
 
-        // Erros de autenticação ou requisição não são corrigidos trocando o modelo.
-        // Limite, sobrecarga e indisponibilidade podem ser temporários; tenta o próximo.
+        // Não tenta modelos antigos descontinuados ou indisponíveis para novas contas.
         if (![408, 429, 500, 502, 503, 504].includes(upstream.status)) {
           const status = upstream.status === 401 || upstream.status === 403 ? 502 : 400;
           return res.status(status).json({
@@ -117,7 +112,7 @@ module.exports = async function handler(req, res) {
     }
 
     return res.status(502).json({
-      error: "A Forja AI tentou mais de um modelo Gemini, mas nenhum conseguiu gerar o aplicativo. Tente novamente em alguns minutos. Detalhe: " + lastDetail
+      error: "O modelo Gemini 3.8 Flash não conseguiu gerar o aplicativo neste momento. Aguarde alguns minutos e tente novamente. Detalhe: " + lastDetail
     });
   } catch (error) {
     return res.status(500).json({ error: "Falha inesperada ao gerar o aplicativo. Tente novamente." });
