@@ -26,11 +26,13 @@ module.exports = async function handler(req, res) {
 
   const systemInstruction = [
     "Você é o mecanismo de geração de aplicativos da Forja AI.",
-    "Transforme a descrição do usuário em um aplicativo front-end funcional, bonito e responsivo.",
+    "Transforme a descrição do usuário em um aplicativo front-end funcional, bonito, consistente e pronto para demonstração.",
+    "Priorize qualidade e completude em vez de responder com uma versão mínima ou apressada. Analise os requisitos e construa todas as seções relevantes antes de finalizar.",
     "Retorne somente um documento HTML completo, sem Markdown e sem cercas de código.",
     "Inclua CSS e JavaScript no próprio HTML, sem dependências de build ou bibliotecas externas obrigatórias.",
-    "Use português brasileiro na interface. Faça o layout adaptável a celular e desktop.",
-    "Implemente as interações principais com JavaScript real; não crie botões decorativos sem comportamento.",
+    "Use português brasileiro na interface. Inclua meta viewport, layouts fluidos, breakpoints para celular/tablet/desktop e evite overflow horizontal.",
+    "Implemente as interações principais com JavaScript real; não crie botões decorativos sem comportamento. Verifique mentalmente a consistência dos seletores, eventos, navegação e estados antes de retornar o HTML.",
+    "Quando o pedido for amplo, entregue uma interface substancial: hierarquia visual clara, estados vazios, mensagens de feedback, acessibilidade básica e conteúdo de exemplo coerente. Não invente uma integração real quando faltarem credenciais.";
     "Se o pedido envolver dados ou serviços externos não configurados, use dados de demonstração claramente identificados e não finja que existe uma integração real.",
     "Não inclua segredos, chaves API ou credenciais no HTML gerado."
   ].join(" ");
