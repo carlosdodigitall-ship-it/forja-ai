@@ -186,7 +186,7 @@ async function verifyCredentials(provider, input) {
 
   if (provider === "gemini") {
     const apiKey = requiredString(input, "apiKey", "chave de API do Gemini", 4096);
-    data = await remoteJson("https://generativelanguage.googleapis.com/v1beta/models?key=" + encodeURIComponent(apiKey), {});
+    data = await remoteJson("https://generativelanguage.googleapis.com/v1beta/models", { headers: { "x-goog-api-key": apiKey } });
     return { credentials: { apiKey }, accountLabel: (data.models && data.models.length ? data.models.length + " modelos disponíveis" : "Chave válida"), scopes: "API Gemini validada" };
   }
 
