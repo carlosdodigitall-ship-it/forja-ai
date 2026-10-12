@@ -35,32 +35,48 @@ module.exports = async function handler(req, res) {
     "Não inclua segredos, chaves API ou credenciais no HTML gerado."
   ].join(" ");
 
-  const model = "gemini-3.8-flash";
+  // Prioriza o modelo principal e usa modelos atuais alternativos somente se o Google
+  // responder com indisponibilidade/capacidade, antes de iniciar o streaming.
+  const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash"];
   let upstream;
-  try {
-    upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":streamGenerateContent?alt=sse", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.35, maxOutputTokens: 8192, responseMimeType: "text/plain" }
-      })
-    });
-  } catch (e) {
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    return res.status(503).json({ error: "Não foi possível conectar ao serviço do Google Gemini. Tente novamente." });
+  let model = models[0];
+  let lastDetail = "";
+  for (const candidate of models) {
+    model = candidate;
+    try {
+      upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + candidate + ":streamGenerateContent?alt=sse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.35, maxOutputTokens: 8192, responseMimeType: "text/plain" }
+        })
+      });
+    } catch (e) {
+      lastDetail = "Falha de conexão ao tentar " + candidate + ".";
+      continue;
+    }
+
+    if (upstream.ok) break;
+
+    const payload = await upstream.json().catch(() => ({}));
+    lastDetail = payload && payload.error && payload.error.message
+      ? payload.error.message
+      : "O serviço retornou HTTP " + upstream.status + ".";
+
+    // Não tenta outros modelos quando o problema é credencial, permissão ou entrada.
+    if (![408, 429, 500, 502, 503, 504].includes(upstream.status)) {
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      const status = upstream.status === 401 || upstream.status === 403 ? 502 : upstream.status;
+      return res.status(status).json({ error: "O Google Gemini recusou a solicitação. " + lastDetail });
+    }
   }
 
-  if (!upstream.ok) {
-    const payload = await upstream.json().catch(() => ({}));
-    const detail = payload && payload.error && payload.error.message ? payload.error.message : "O serviço retornou HTTP " + upstream.status + ".";
+  if (!upstream || !upstream.ok) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
-    const status = upstream.status === 429 ? 429 : (upstream.status === 401 || upstream.status === 403 ? 502 : 400);
-    return res.status(status).json({
-      error: upstream.status === 429
-        ? "O limite de uso ou a capacidade do Gemini foi atingido. Aguarde e tente novamente. " + detail
-        : "O Google Gemini recusou a solicitação. " + detail
+    return res.status(503).json({
+      error: "Os modelos Gemini disponíveis estão temporariamente sem capacidade. A Forja AI tentou os modelos atuais alternativos. Aguarde um pouco e tente novamente. Detalhe: " + lastDetail
     });
   }
 
@@ -84,10 +100,10 @@ module.exports = async function handler(req, res) {
       const part = await reader.read();
       done = part.done;
       rawBuffer += decoder.decode(part.value || new Uint8Array(), { stream: !done });
-      const blocks = rawBuffer.split("\n\n");
+      const blocks = rawBuffer.split(/\r?\n\r?\n/);
       rawBuffer = blocks.pop() || "";
       for (const block of blocks) {
-        const dataLine = block.split("\n").find(line => line.startsWith("data:"));
+        const dataLine = block.split(/\r?\n/).find(line => line.startsWith("data:"));
         if (!dataLine) continue;
         let chunk;
         try { chunk = JSON.parse(dataLine.slice(5).trim()); } catch (e) { continue; }
