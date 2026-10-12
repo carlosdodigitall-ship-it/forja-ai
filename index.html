@@ -1361,5 +1361,111 @@ document.addEventListener('DOMContentLoaded', async function() {
   else start();
 })();
 </script>
+
+<!-- Forja AI: seleciona o provedor conectado para a geração de apps -->
+<script>
+(function () {
+  "use strict";
+  var selectionKey = "forja-ai-selected-model";
+  var activeProvider = "auto";
+  function getUser() {
+    return window.forjaFirebase && window.forjaFirebase.currentUser && !window.forjaFirebase.currentUser.isAnonymous ? window.forjaFirebase.currentUser : null;
+  }
+  function safeText(s) { return String(s == null ? "" : s); }
+  function addSelector() {
+    var textarea = document.querySelector('textarea[aria-label="Descreva seu app"]');
+    if (!textarea || document.getElementById("forja-ai-model-picker")) return;
+    var wrap = document.createElement("div");
+    wrap.id = "forja-ai-model-picker";
+    wrap.style.cssText = "display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px;width:100%;font:12px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:#705e55";
+    var label = document.createElement("label");
+    label.htmlFor = "forja-ai-provider-select";
+    label.textContent = "Modelo de IA";
+    label.style.cssText = "font-weight:800;letter-spacing:.01em";
+    var select = document.createElement("select");
+    select.id = "forja-ai-provider-select";
+    select.style.cssText = "max-width:100%;border:1px solid #e4d3c8;border-radius:9px;padding:8px 10px;background:#fffaf7;color:#382820;font:inherit;font-weight:700";
+    select.innerHTML = '<option value="auto">Automático — usar IA conectada</option>';
+    select.value = safeText(localStorage.getItem(selectionKey) || "auto");
+    select.addEventListener("change", function () {
+      activeProvider = select.value || "auto";
+      try { localStorage.setItem(selectionKey, activeProvider); } catch (_) {}
+    });
+    wrap.append(label,select);
+    textarea.parentNode.insertBefore(wrap,textarea);
+    refreshOptions(select);
+  }
+  async function refreshOptions(select) {
+    var user = getUser();
+    if (!user || !select) return;
+    try {
+      var token = await user.getIdToken();
+      var response = await window.__forjaOriginalFetch("/api/integrations?action=list", {headers:{"Authorization":"Bearer "+token},cache:"no-store"});
+      if (!response.ok) return;
+      var payload = await response.json();
+      var data = payload.integrations || {};
+      var list = [
+        {id:"gemini",name:"Google Gemini"},
+        {id:"openai",name:"OpenAI"},
+        {id:"anthropic",name:"Anthropic Claude"},
+        {id:"groq",name:"Groq"},
+        {id:"openrouter",name:"OpenRouter"}
+      ];
+      var saved = select.value || "auto";
+      select.innerHTML = '<option value="auto">Automático — usar IA conectada</option>';
+      list.forEach(function (p) {
+        if (!data[p.id]) return;
+        var opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.name + " — conectado";
+        select.appendChild(opt);
+      });
+      var valid = Array.prototype.some.call(select.options,function(o){return o.value===saved;});
+      select.value = valid ? saved : "auto";
+      activeProvider = select.value || "auto";
+      try { localStorage.setItem(selectionKey, activeProvider); } catch (_) {}
+    } catch (_) {}
+  }
+  function installFetchBridge() {
+    if (window.__forjaGenerateBridgeInstalled) return;
+    var original = window.fetch.bind(window);
+    window.__forjaOriginalFetch = original;
+    window.__forjaGenerateBridgeInstalled = true;
+    window.fetch = async function (input, init) {
+      var url = typeof input === "string" ? input : (input && input.url) || "";
+      var options = init ? Object.assign({},init) : {};
+      var method = String(options.method || (input && input.method) || "GET").toUpperCase();
+      if (url.indexOf("/api/generate") !== -1 && method === "POST") {
+        var user = getUser();
+        var headers = new Headers(options.headers || (input && input.headers) || {});
+        var body = {};
+        try { body = JSON.parse(options.body || "{}"); } catch (_) {}
+        var select = document.getElementById("forja-ai-provider-select");
+        body.provider = select && select.value ? select.value : (activeProvider || "auto");
+        if (user) {
+          try { headers.set("Authorization","Bearer "+await user.getIdToken()); } catch (_) {}
+        }
+        headers.set("Content-Type","application/json");
+        options.headers = headers;
+        options.body = JSON.stringify(body);
+        options.cache = "no-store";
+      }
+      return original(input, options);
+    };
+  }
+  function start() {
+    installFetchBridge();
+    addSelector();
+    var observer = new MutationObserver(function(){addSelector();});
+    observer.observe(document.documentElement,{childList:true,subtree:true});
+    window.addEventListener("forja:integrations-updated",function(){
+      var select=document.getElementById("forja-ai-provider-select");
+      if(select)refreshOptions(select);
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded",start,{once:true});
+  else start();
+})();
+</script>
 </body>
 </html>
