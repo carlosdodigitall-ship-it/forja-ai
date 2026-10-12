@@ -121,7 +121,7 @@ async function resolveProvider(req, requested) {
 }
 
 async function requestGemini(apiKey, prompt) {
-  const models = (process.env.FORJA_GEMINI_MODELS || "gemini-2.5-flash,gemini-2.0-flash").split(",").map(function(v){return v.trim();}).filter(Boolean);
+  const models = (process.env.FORJA_GEMINI_MODELS || "gemini-3.8-flash,gemini-3.6-flash").split(",").map(function(v){return v.trim();}).filter(Boolean);
   let upstream;
   let detail = "";
   let selected = models[0];
@@ -194,7 +194,7 @@ async function requestOpenAICompatible(provider, apiKey, prompt) {
 }
 
 async function requestAnthropic(apiKey, prompt) {
-  const model = process.env.FORJA_ANTHROPIC_MODEL || "claude-3-7-sonnet-latest";
+  const model = process.env.FORJA_ANTHROPIC_MODEL || "claude-sonnet-4-6";
   const upstream = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
