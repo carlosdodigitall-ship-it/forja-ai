@@ -1031,5 +1031,335 @@ document.addEventListener('DOMContentLoaded', async function() {
   attachWhenDashboardExists();
 </script>
 
+
+<!-- Forja AI: integrações reais, com validação e armazenamento criptografado no servidor -->
+<script>
+(function () {
+  "use strict";
+  var BRAND = "#C93F12";
+  var providers = [
+    {id:"github",name:"GitHub",category:"Desenvolvimento",desc:"Valide o acesso a repositórios e à conta GitHub.",icon:"github",fields:[{key:"token",label:"Personal Access Token",placeholder:"github_pat_...",type:"password"}],help:"Crie um token nas configurações do GitHub com as permissões mínimas necessárias.",docs:"https://github.com/settings/personal-access-tokens",kind:"Token de acesso"},
+    {id:"vercel",name:"Vercel",category:"Hospedagem",desc:"Conecte a conta para consultar recursos da Vercel.",icon:"vercel",fields:[{key:"token",label:"Access Token",placeholder:"Cole seu token da Vercel",type:"password"}],help:"Crie um token pessoal nas configurações da sua conta Vercel. O token fica guardado apenas no servidor criptografado.",docs:"https://vercel.com/account/settings/tokens",kind:"Token de acesso"},
+    {id:"gitlab",name:"GitLab",category:"Desenvolvimento",desc:"Valide seu token e identidade do GitLab.",icon:"gitlab",fields:[{key:"token",label:"Personal Access Token",placeholder:"glpat-...",type:"password"}],help:"Crie um token com escopo mínimo adequado ao seu uso.",docs:"https://gitlab.com/-/user_settings/personal_access_tokens",kind:"Token de acesso"},
+    {id:"openai",name:"OpenAI",category:"Inteligência artificial",desc:"Verifique sua chave e liste os modelos disponíveis na API.",icon:"openai",fields:[{key:"apiKey",label:"API key",placeholder:"sk-...",type:"password"}],help:"Use uma chave de API da plataforma OpenAI. A chave não será retornada à interface depois da validação.",docs:"https://platform.openai.com/api-keys",kind:"Chave de API"},
+    {id:"gemini",name:"Google Gemini",category:"Inteligência artificial",desc:"Verifique a chave e consulte modelos da API Gemini.",icon:"googlegemini",fields:[{key:"apiKey",label:"API key",placeholder:"Cole sua chave do Google AI Studio",type:"password"}],help:"Crie uma chave no Google AI Studio e confirme que a API Gemini está habilitada no projeto.",docs:"https://aistudio.google.com/app/apikey",kind:"Chave de API"},
+    {id:"anthropic",name:"Anthropic",category:"Inteligência artificial",desc:"Valide o acesso à API e à lista de modelos Claude.",icon:"anthropic",fields:[{key:"apiKey",label:"API key",placeholder:"sk-ant-...",type:"password"}],help:"Crie sua chave no Console da Anthropic. O uso pode gerar cobranças na conta do provedor.",docs:"https://console.anthropic.com/settings/keys",kind:"Chave de API"},
+    {id:"supabase",name:"Supabase",category:"Banco de dados",desc:"Valide URL do projeto e chave publicável/anon do Supabase.",icon:"supabase",fields:[{key:"projectUrl",label:"Project URL",placeholder:"https://seu-projeto.supabase.co",type:"url"},{key:"anonKey",label:"Publishable key ou anon key",placeholder:"sb_publishable_... ou eyJ...",type:"password"}],help:"Não use a service_role key no navegador. A Forja valida a URL e a chave pelo servidor; evite conceder permissões maiores que as necessárias.",docs:"https://supabase.com/dashboard",kind:"URL + chave"},
+    {id:"stripe",name:"Stripe",category:"Pagamentos",desc:"Valide a chave e identifique a conta Stripe.",icon:"stripe",fields:[{key:"secretKey",label:"Secret key ou restricted key",placeholder:"sk_test_... ou rk_test_...",type:"password"}],help:"Comece por uma chave de teste. Nunca use a publishable key neste campo.",docs:"https://dashboard.stripe.com/apikeys",kind:"Chave secreta"},
+    {id:"mercadopago",name:"Mercado Pago",category:"Pagamentos",desc:"Valide o Access Token consultando a conta da API.",icon:"mercadopago",fields:[{key:"accessToken",label:"Access Token",placeholder:"APP_USR-... ou TEST-...",type:"password"}],help:"Use primeiro credenciais de teste. O token deve pertencer à conta que você quer conectar.",docs:"https://www.mercadopago.com.br/developers/panel/app",kind:"Access Token"},
+    {id:"resend",name:"Resend",category:"Comunicação",desc:"Valide a chave de API e consulte a lista de domínios.",icon:"resend",fields:[{key:"apiKey",label:"API key",placeholder:"re_...",type:"password"}],help:"A chave precisa ter permissão para consultar domínios. Se usar chave restrita, ajuste o escopo no Resend.",docs:"https://resend.com/api-keys",kind:"Chave de API"},
+    {id:"groq",name:"Groq",category:"Inteligência artificial",desc:"Valide a chave e consulte os modelos disponíveis.",icon:"groq",fields:[{key:"apiKey",label:"API key",placeholder:"gsk_...",type:"password"}],help:"Crie a chave no console da Groq e confira os limites de uso da sua conta.",docs:"https://console.groq.com/keys",kind:"Chave de API"},
+    {id:"openrouter",name:"OpenRouter",category:"Inteligência artificial",desc:"Valide a chave e consulte os detalhes de autenticação.",icon:"openrouter",fields:[{key:"apiKey",label:"API key",placeholder:"sk-or-...",type:"password"}],help:"Crie uma chave no OpenRouter. O saldo e as políticas de cada modelo continuam sob controle da conta do provedor.",docs:"https://openrouter.ai/settings/keys",kind:"Chave de API"}
+  ];
+  var css = [
+    ".forja-integrations{color:#241712;font-family:inherit;width:100%;min-width:0}",
+    ".fi-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px}",
+    ".fi-eyebrow{color:#a44b28;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;margin-bottom:7px}",
+    ".fi-title{font-size:clamp(28px,3vw,36px);letter-spacing:-.04em;line-height:1.1;margin:0 0 10px;font-weight:800}",
+    ".fi-subtitle{margin:0;color:#75645b;font-size:14px;line-height:1.65;max-width:720px}",
+    ".fi-primary{border:0;background:"+BRAND+";color:#fff;padding:11px 15px;border-radius:11px;font:inherit;font-weight:750;cursor:pointer}",
+    ".fi-secondary{border:1px solid #e8d9d0;background:#fff;color:#382820;padding:10px 14px;border-radius:11px;font:inherit;font-weight:650;cursor:pointer}",
+    ".fi-primary:disabled,.fi-secondary:disabled{opacity:.55;cursor:wait}",
+    ".fi-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:22px 0 16px}",
+    ".fi-search{flex:1 1 220px;min-width:180px;padding:12px 14px;border-radius:11px;border:1px solid #eadcd4;background:#fff;font:inherit;color:#241712}",
+    ".fi-filter{padding:9px 13px;border-radius:10px;border:1px solid #eadcd4;background:#fff;color:#58463d;font:inherit;cursor:pointer}",
+    ".fi-filter[aria-pressed=true]{background:#2a1a14;color:#fff;border-color:#2a1a14}",
+    ".fi-summary{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 22px}",
+    ".fi-stat{background:#fff;border:1px solid #ecdfd7;border-radius:13px;padding:13px 16px;min-width:135px}",
+    ".fi-stat strong{display:block;font-size:21px;letter-spacing:-.03em}.fi-stat span{display:block;color:#79665d;font-size:12px;margin-top:2px}",
+    ".fi-notice{display:flex;gap:12px;align-items:flex-start;border:1px solid #eed0a5;background:#fff8eb;color:#67471c;padding:14px 16px;border-radius:13px;margin:16px 0;line-height:1.5;font-size:13px}",
+    ".fi-notice a{color:#8d461e;font-weight:800}",
+    ".fi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:15px}",
+    ".fi-card{background:#fff;border:1px solid #eaddd5;border-radius:17px;padding:17px;display:flex;flex-direction:column;gap:16px;min-width:0;transition:border-color .15s,transform .15s}",
+    ".fi-card:hover{border-color:#d0a38d;transform:translateY(-1px)}",
+    ".fi-card-head{display:flex;align-items:flex-start;gap:12px}",
+    ".fi-logo-box{width:48px;height:48px;flex:0 0 48px;border-radius:13px;border:1px solid #f0e6e0;background:#fffaf7;display:flex;align-items:center;justify-content:center}",
+    ".fi-logo{width:28px;height:28px;object-fit:contain}.fi-logo-fallback{font-weight:850;color:#a64926;font-size:16px}",
+    ".fi-card-name{font-size:16px;font-weight:800;margin:1px 0 4px}.fi-card-desc{font-size:12px;line-height:1.5;color:#79675e;margin:0}",
+    ".fi-category{display:inline-flex;border-radius:99px;background:#f8efe9;color:#80503b;padding:4px 8px;font-size:10px;font-weight:800;margin-top:7px}",
+    ".fi-status{display:flex;align-items:center;gap:7px;color:#7b6c63;font-size:12px;font-weight:700;margin-top:auto}",
+    ".fi-dot{width:8px;height:8px;border-radius:50%;background:#b6aaa3;display:inline-block;flex:0 0 8px}.fi-dot.connected{background:#218653;box-shadow:0 0 0 3px #e1f4e8}",
+    ".fi-card-actions{display:flex;align-items:center;gap:8px}.fi-card-actions button{flex:1}",
+    ".fi-card-account{font-size:11px;color:#4c7c60;overflow-wrap:anywhere;margin-top:-7px}",
+    ".fi-empty{padding:32px;border:1px dashed #dec8bc;border-radius:15px;color:#806d63;text-align:center;grid-column:1/-1;background:#fffaf7}",
+    ".fi-overlay{position:fixed;inset:0;background:rgba(31,20,15,.55);z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}",
+    ".fi-modal{width:min(100%,520px);background:#fffaf7;border-radius:20px;border:1px solid #f2e3da;box-shadow:0 24px 80px rgba(30,15,8,.28);padding:24px;max-height:calc(100vh - 36px);overflow:auto}",
+    ".fi-modal-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:17px}.fi-modal h3{margin:0 0 7px;font-size:24px;letter-spacing:-.03em}.fi-modal p{font-size:13px;line-height:1.55;color:#75645b;margin:0}",
+    ".fi-close{width:34px;height:34px;border-radius:9px;background:#fff;border:1px solid #ebddd4;cursor:pointer;font-size:20px;color:#544037;flex:0 0 34px}",
+    ".fi-field{display:flex;flex-direction:column;gap:7px;margin:15px 0}.fi-field label{font-size:12px;font-weight:800;color:#49352b}.fi-field input{width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #e4d3c8;background:#fff;color:#2b1b13;font:inherit;min-width:0}",
+    ".fi-help{border:1px solid #eddfd6;background:#fff;padding:12px 13px;border-radius:11px;font-size:12px;line-height:1.6;color:#725c50;margin:15px 0}.fi-help a{color:#b4441d;font-weight:800}",
+    ".fi-error{display:none;color:#8b2821;border:1px solid #f0c4bd;background:#fff0ed;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;margin:12px 0}.fi-success{color:#216941}",
+    ".fi-modal-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}.fi-modal-actions button{flex:1}",
+    "@media(max-width:620px){.fi-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.fi-stat{min-width:0}.fi-modal{padding:18px}.fi-title{font-size:28px}}"
+  ].join("");
+  var root = null;
+  var main = null;
+  var homeMarkup = "";
+  var activeFilter = "all";
+  var searchTerm = "";
+  var connected = {};
+  var setupRequired = false;
+  var loadMessage = "";
+  var overlay = null;
+
+  function escapeHTML(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (ch) {
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch];
+    });
+  }
+  function currentUser() {
+    return window.forjaFirebase && window.forjaFirebase.currentUser && !window.forjaFirebase.currentUser.isAnonymous ? window.forjaFirebase.currentUser : null;
+  }
+  async function api(action, method, body) {
+    var user = currentUser();
+    if (!user) throw new Error("Entre na sua conta da Forja AI antes de gerenciar integrações.");
+    var token = await user.getIdToken();
+    var response = await fetch("/api/integrations?action=" + encodeURIComponent(action), {
+      method: method || "GET",
+      headers: {"Authorization":"Bearer " + token, "Content-Type":"application/json"},
+      cache:"no-store",
+      body: body ? JSON.stringify(body) : undefined
+    });
+    var data = {};
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok) {
+      if (data.code === "SERVER_SETUP_REQUIRED") setupRequired = true;
+      throw new Error(data.error || "A solicitação falhou. Tente novamente.");
+    }
+    return data;
+  }
+  function buildStyle() {
+    if (document.getElementById("forja-integrations-style")) return;
+    var style = document.createElement("style");
+    style.id = "forja-integrations-style";
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+  function getProvider(id) {
+    for (var i=0;i<providers.length;i++) if (providers[i].id === id) return providers[i];
+    return null;
+  }
+  function render() {
+    if (!main || !main.querySelector(".forja-integrations")) return;
+    var filtered = providers.filter(function (p) {
+      var isConnected = !!connected[p.id];
+      var matchesFilter = activeFilter === "all" || (activeFilter === "connected" && isConnected) || (activeFilter === "disconnected" && !isConnected);
+      var haystack = (p.name + " " + p.category + " " + p.desc).toLowerCase();
+      return matchesFilter && haystack.indexOf(searchTerm.toLowerCase()) >= 0;
+    });
+    var count = Object.keys(connected).length;
+    var warning = "";
+    if (setupRequired) {
+      warning = '<div class="fi-notice"><span aria-hidden="true">⚠</span><div><strong>Falta configurar o armazenamento seguro no servidor.</strong><br>Adicione <code>FIREBASE_SERVICE_ACCOUNT_JSON</code> e <code>INTEGRATIONS_ENCRYPTION_KEY</code> nas variáveis de ambiente da Vercel. As credenciais não serão guardadas no navegador. <a href="https://vercel.com/projects-digitais/forja-ai/settings/environment-variables" target="_blank" rel="noopener noreferrer">Abrir variáveis do projeto</a></div></div>';
+    } else if (loadMessage) {
+      warning = '<div class="fi-notice"><span aria-hidden="true">i</span><div>' + escapeHTML(loadMessage) + '</div></div>';
+    }
+    var cards = filtered.map(function (p) {
+      var item = connected[p.id];
+      var ok = !!item;
+      var iconUrl = "https://cdn.simpleicons.org/" + encodeURIComponent(p.icon);
+      var label = ok ? (item.accountLabel || "Credencial validada") : "Não conectado";
+      var status = ok ? '<span class="fi-dot connected"></span>Conectado e validado' : '<span class="fi-dot"></span>Não conectado';
+      var account = ok ? '<div class="fi-card-account">' + escapeHTML(label) + '</div>' : "";
+      return '<article class="fi-card" data-card="' + p.id + '">' +
+        '<div class="fi-card-head"><div class="fi-logo-box"><img class="fi-logo" src="' + iconUrl + '" alt="" loading="lazy"><span class="fi-logo-fallback" hidden>' + escapeHTML(p.name.slice(0,2).toUpperCase()) + '</span></div>' +
+        '<div style="min-width:0;flex:1"><div class="fi-card-name">' + escapeHTML(p.name) + '</div><p class="fi-card-desc">' + escapeHTML(p.desc) + '</p><span class="fi-category">' + escapeHTML(p.category) + '</span></div></div>' +
+        '<div class="fi-status">' + status + '</div>' + account +
+        '<div class="fi-card-actions"><button type="button" class="fi-primary" data-fi-action="configure" data-provider="' + p.id + '">' + (ok ? "Gerenciar" : "Conectar") + '</button>' +
+        (ok ? '<button type="button" class="fi-secondary" data-fi-action="disconnect" data-provider="' + p.id + '">Desconectar</button>' : '') +
+        '</div></article>';
+    }).join("");
+    main.querySelector(".fi-summary-connected").textContent = String(count);
+    main.querySelector(".fi-summary-total").textContent = String(providers.length);
+    main.querySelector(".fi-grid").innerHTML = cards || '<div class="fi-empty">Nenhuma integração corresponde à busca ou ao filtro escolhido.</div>';
+    main.querySelector(".fi-notice-slot").innerHTML = warning;
+    main.querySelectorAll(".fi-logo").forEach(function (img) {
+      img.addEventListener("error", function () { img.hidden = true; if (img.nextElementSibling) img.nextElementSibling.hidden = false; }, { once:true });
+    });
+    main.querySelectorAll("[data-fi-action]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        if (button.dataset.fiAction === "configure") openModal(button.dataset.provider);
+        else disconnectProvider(button.dataset.provider, button);
+      });
+    });
+    main.querySelectorAll("[data-fi-filter]").forEach(function (button) {
+      button.setAttribute("aria-pressed", button.dataset.fiFilter === activeFilter ? "true" : "false");
+    });
+  }
+  function pageMarkup() {
+    return '<div class="forja-integrations">' +
+      '<div class="fi-top"><div><div class="fi-eyebrow">Central de conexões</div><h1 class="fi-title">Integrações</h1><p class="fi-subtitle">Conecte suas ferramentas com validação real. As credenciais são verificadas no servidor e armazenadas criptografadas; a interface nunca recebe de volta os segredos.</p></div>' +
+      '<a class="fi-secondary" href="https://simpleicons.org/" target="_blank" rel="noopener noreferrer" style="text-decoration:none">Logotipos oficiais ↗</a></div>' +
+      '<div class="fi-summary"><div class="fi-stat"><strong class="fi-summary-connected">0</strong><span>Conectadas e validadas</span></div><div class="fi-stat"><strong class="fi-summary-total">' + providers.length + '</strong><span>Conectores disponíveis</span></div></div>' +
+      '<div class="fi-notice-slot" aria-live="polite"></div>' +
+      '<div class="fi-toolbar"><input class="fi-search" type="search" placeholder="Buscar plataforma ou categoria..." aria-label="Buscar integrações">' +
+      '<button class="fi-filter" data-fi-filter="all" aria-pressed="true">Todas</button><button class="fi-filter" data-fi-filter="connected" aria-pressed="false">Conectadas</button><button class="fi-filter" data-fi-filter="disconnected" aria-pressed="false">Não conectadas</button></div>' +
+      '<div class="fi-grid" aria-live="polite"></div>' +
+      '<p style="font-size:11px;color:#88746a;line-height:1.6;margin-top:18px">Uma integração só aparece como conectada depois que a própria API confirma a credencial. Conectar uma conta não implica que ações como publicar projetos ou executar modelos já estejam automaticamente habilitadas em todas as áreas da Forja AI.</p>' +
+      '</div>';
+  }
+  async function loadConnections() {
+    setupRequired = false;
+    loadMessage = "";
+    try {
+      var data = await api("list", "GET");
+      connected = data.integrations || {};
+    } catch (error) {
+      connected = {};
+      if (!setupRequired) loadMessage = error.message;
+    }
+    render();
+  }
+  function closeModal() {
+    if (overlay) overlay.remove();
+    overlay = null;
+  }
+  function showModalMessage(text, isError) {
+    var box = overlay && overlay.querySelector(".fi-error");
+    if (!box) return;
+    box.style.display = "block";
+    box.className = "fi-error" + (isError ? "" : " fi-success");
+    box.textContent = text;
+  }
+  function openModal(id) {
+    var p = getProvider(id);
+    if (!p) return;
+    closeModal();
+    overlay = document.createElement("div");
+    overlay.className = "fi-overlay";
+    overlay.innerHTML = '<section class="fi-modal" role="dialog" aria-modal="true" aria-labelledby="fi-modal-title">' +
+      '<div class="fi-modal-head"><div><div class="fi-eyebrow">' + escapeHTML(p.kind) + '</div><h3 id="fi-modal-title">' + escapeHTML(p.name) + '</h3><p>' + escapeHTML(p.desc) + '</p></div><button class="fi-close" type="button" aria-label="Fechar">×</button></div>' +
+      '<form class="fi-form" autocomplete="off" novalidate><div class="fi-fields"></div><div class="fi-help">' + escapeHTML(p.help) + '<br><a href="' + p.docs + '" target="_blank" rel="noopener noreferrer">Abrir página oficial para obter credencial ↗</a></div>' +
+      '<div class="fi-error" role="status" aria-live="polite"></div><div class="fi-modal-actions"><button type="button" class="fi-secondary fi-cancel">Cancelar</button><button type="submit" class="fi-primary fi-submit">Validar e conectar</button></div></form></section>';
+    document.body.appendChild(overlay);
+    var fieldWrap = overlay.querySelector(".fi-fields");
+    p.fields.forEach(function (field) {
+      var group = document.createElement("div");
+      group.className = "fi-field";
+      var label = document.createElement("label");
+      label.textContent = field.label;
+      label.htmlFor = "fi-" + p.id + "-" + field.key;
+      var input = document.createElement("input");
+      input.id = label.htmlFor;
+      input.name = field.key;
+      input.type = field.type || "password";
+      input.placeholder = field.placeholder;
+      input.autocomplete = "off";
+      input.spellcheck = false;
+      input.required = true;
+      input.maxLength = 4096;
+      group.append(label,input);
+      fieldWrap.appendChild(group);
+    });
+    overlay.querySelector(".fi-close").addEventListener("click", closeModal);
+    overlay.querySelector(".fi-cancel").addEventListener("click", closeModal);
+    overlay.addEventListener("click", function (event) { if (event.target === overlay) closeModal(); });
+    overlay.querySelector(".fi-form").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      var button = overlay.querySelector(".fi-submit");
+      var credentials = {};
+      p.fields.forEach(function (field) { credentials[field.key] = overlay.querySelector('[name="' + field.key + '"]').value.trim(); });
+      if (p.fields.some(function (field) { return !credentials[field.key]; })) {
+        showModalMessage("Preencha todos os campos antes de validar.", true);
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "Validando na plataforma...";
+      try {
+        var result = await api("connect", "POST", {provider:p.id, credentials:credentials});
+        connected[p.id] = {provider:p.id,status:"connected",accountLabel:result.accountLabel || p.name};
+        closeModal();
+        render();
+      } catch (error) {
+        showModalMessage(error.message || "Não foi possível validar a credencial.", true);
+      } finally {
+        if (overlay && overlay.querySelector(".fi-submit")) {
+          var submit = overlay.querySelector(".fi-submit");
+          submit.disabled = false;
+          submit.textContent = "Validar e conectar";
+        }
+      }
+    });
+    var first = overlay.querySelector("input");
+    if (first) first.focus();
+  }
+  async function disconnectProvider(id, button) {
+    var p = getProvider(id);
+    if (!p || !connected[id]) return;
+    if (!window.confirm("Desconectar " + p.name + "? A credencial criptografada será removida da Forja AI.")) return;
+    button.disabled = true;
+    try {
+      await api("disconnect", "POST", {provider:id});
+      delete connected[id];
+      render();
+    } catch (error) {
+      window.alert(error.message);
+      button.disabled = false;
+    }
+  }
+  function setActiveLink(targetName) {
+    if (!root) return;
+    root.querySelectorAll("nav a").forEach(function (a) {
+      var match = a.textContent.trim() === targetName;
+      a.style.background = match ? "#fff" : "transparent";
+      a.style.border = match ? "1px solid #E9DFD8" : "1px solid transparent";
+      a.style.color = match ? "#1C1417" : "#4A3D43";
+      a.style.fontWeight = match ? "700" : "500";
+    });
+  }
+  function openIntegrations() {
+    if (!main) return;
+    main.innerHTML = pageMarkup();
+    main.style.gap = "22px";
+    main.style.paddingTop = "26px";
+    buildStyle();
+    var search = main.querySelector(".fi-search");
+    search.addEventListener("input", function () { searchTerm = search.value; render(); });
+    main.querySelectorAll("[data-fi-filter]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        activeFilter = button.dataset.fiFilter;
+        render();
+      });
+    });
+    setActiveLink("Integrações");
+    render();
+    loadConnections();
+  }
+  function openHome() {
+    if (!main || !homeMarkup) return;
+    closeModal();
+    main.innerHTML = homeMarkup;
+    main.style.gap = "";
+    main.style.paddingTop = "";
+    setActiveLink("Início");
+  }
+  function attach() {
+    root = document.querySelector('[data-document-role="page"]');
+    if (!root) return false;
+    main = root.querySelector("main");
+    if (!main) return false;
+    homeMarkup = main.innerHTML;
+    root.querySelectorAll("nav a").forEach(function (a) {
+      var name = a.textContent.trim();
+      if (name === "Integrações") {
+        a.addEventListener("click", function (event) { event.preventDefault(); openIntegrations(); });
+      } else if (name === "Início") {
+        a.addEventListener("click", function (event) { event.preventDefault(); openHome(); });
+      }
+    });
+    window.addEventListener("keydown", function (event) { if (event.key === "Escape") closeModal(); });
+    return true;
+  }
+  function start() {
+    if (attach()) return;
+    var observer = new MutationObserver(function () {
+      if (attach()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, {childList:true,subtree:true});
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, {once:true});
+  else start();
+})();
+</script>
 </body>
 </html>
