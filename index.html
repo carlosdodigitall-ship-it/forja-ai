@@ -468,7 +468,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     var status = document.createElement("div");
     status.id = "forja-preview-status";
-    status.style.cssText = "margin:16px;padding:18px;background:#fff;border:1px solid #E9DFD8;border-radius:14px;color:#6B5D63";
+    status.style.cssText = "margin:16px;padding:18px;background:#fff;border:1px solid #E9DFD8;border-radius:14px;color:#6B5D63;box-shadow:0 8px 24px rgba(32,25,29,.04);min-height:24px";
     status.textContent = "Descreva o aplicativo no campo principal e clique na seta para cima para começar.";
     var frame = document.createElement("iframe");
     frame.id = "forja-preview-frame";
@@ -535,7 +535,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var d = drawer || createDrawer();
     d.status.style.display = "block";
     d.status.style.color = "#6B5D63";
-    d.status.textContent = "Criando seu aplicativo com IA… Se o modelo principal estiver ocupado, a Forja AI tentará alternativas.";
+    d.status.textContent = "Preparando o projeto…";
     d.frame.style.display = "none";
     d.codeArea.style.display = "none";
     trigger.disabled = true;
@@ -543,19 +543,66 @@ document.addEventListener('DOMContentLoaded', async function() {
     trigger.setAttribute("aria-busy", "true");
 
     try {
+      d.status.textContent = "Enviando sua descrição para o Gemini…";
+      d.codeArea.value = "";
+      showTab("code");
       var response = await fetch("/api/generate", {
         method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({prompt:prompt})
+        headers: {"Content-Type":"application/json","Accept":"text/event-stream"},
+        body: JSON.stringify({prompt:prompt,stream:true})
       });
-      var data = await response.json().catch(function(){ return {}; });
-      if (!response.ok) throw new Error(data.error || "Não foi possível gerar o aplicativo. Tente novamente.");
-      if (typeof data.code !== "string" || !data.code.trim()) throw new Error("A IA respondeu sem código HTML. Tente novamente.");
-      generatedCode = data.code;
-      d.frame.srcdoc = generatedCode;
+      var contentType = response.headers.get("content-type") || "";
+      if (!response.ok) {
+        var errData = contentType.indexOf("application/json") !== -1
+          ? await response.json().catch(function(){ return {}; })
+          : {error: await response.text().catch(function(){ return ""; })};
+        throw new Error(errData.error || "Não foi possível gerar o aplicativo. Tente novamente.");
+      }
+      if (!response.body || !response.body.getReader || contentType.indexOf("text/event-stream") === -1) {
+        var fallback = await response.json().catch(function(){ return {}; });
+        if (!fallback.code) throw new Error(fallback.error || "A resposta da IA não pôde ser lida.");
+        generatedCode = fallback.code;
+      } else {
+        var reader = response.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = "";
+        var streamed = "";
+        var finished = false;
+        d.status.textContent = "Gemini está escrevendo o código do aplicativo…";
+        while (!finished) {
+          var part = await reader.read();
+          if (part.done) break;
+          buffer += decoder.decode(part.value, {stream:true});
+          var events = buffer.split("\n\n");
+          buffer = events.pop() || "";
+          for (var ei = 0; ei < events.length; ei++) {
+            var lines = events[ei].split("\n");
+            for (var li = 0; li < lines.length; li++) {
+              if (lines[li].indexOf("data:") !== 0) continue;
+              var eventData;
+              try { eventData = JSON.parse(lines[li].slice(5).trim()); } catch(e) { continue; }
+              if (eventData.type === "chunk" && eventData.text) {
+                streamed += eventData.text;
+                d.codeArea.value = streamed;
+                d.status.textContent = "Aplicativo sendo criado em tempo real · " + streamed.length.toLocaleString("pt-BR") + " caracteres recebidos";
+                d.codeArea.scrollTop = d.codeArea.scrollHeight;
+              } else if (eventData.type === "done") {
+                generatedCode = eventData.code || streamed;
+                finished = true;
+              } else if (eventData.type === "error") {
+                throw new Error(eventData.error || "A geração foi interrompida.");
+              }
+            }
+          }
+        }
+        if (!generatedCode && streamed.trim()) generatedCode = streamed;
+      }
+      if (typeof generatedCode !== "string" || !generatedCode.trim()) throw new Error("A IA terminou sem retornar código HTML. Tente novamente.");
+      d.status.textContent = "Código recebido. Montando a prévia interativa…";
       d.codeArea.value = generatedCode;
+      d.frame.srcdoc = generatedCode;
       d.status.style.display = "none";
-      showTab(activeTab || "preview");
+      showTab("preview");
     } catch (error) {
       d.status.style.display = "block";
       d.status.style.color = "#9C2F0A";
