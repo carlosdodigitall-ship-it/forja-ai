@@ -47,59 +47,120 @@ function getAdmin() {
   return { auth: admin.auth(), db: admin.firestore() };
 }
 
-function getBearer(req) {
-  const match = String(req.headers.authorization || "").match(/^Bearer\s+(.+)$/i);
-  return match ? match[1] : "";
+let firebaseCertificates = null;
+let firebaseCertificatesExpiresAt = 0;
+let firebaseCertificateFetch = null;
+
+async function verifyFirebaseIdToken(idToken) {
+  const projectId = process.env.FIREBASE_PROJECT_ID || "forja-d4aef";
+  const unauthorized = function () {
+    const e = new Error("Sua sessão não é válida ou expirou. Entre novamente na Forja AI.");
+    e.status = 401;
+    return e;
+  };
+  if (!idToken || idToken.length > 10000) throw unauthorized();
+
+  const parts = idToken.split(".");
+  if (parts.length !== 3) throw unauthorized();
+  let header, claims, signature;
+  try {
+    header = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+    claims = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    signature = Buffer.from(parts[2], "base64url");
+  } catch (_) { throw unauthorized(); }
+  const now = Math.floor(Date.now() / 1000);
+  if (header.alg !== "RS256" || !header.kid ||
+      claims.iss !== "https://securetoken.google.com/" + projectId ||
+      claims.aud !== projectId ||
+      typeof claims.sub !== "string" || !claims.sub ||
+      claims.sub.length > 128 ||
+      !Number.isFinite(claims.exp) || claims.exp <= now ||
+      !Number.isFinite(claims.iat) || claims.iat > now + 60 ||
+      (Number.isFinite(claims.nbf) && claims.nbf > now + 60) ||
+      !Number.isFinite(claims.auth_time) || claims.auth_time > now + 60 ||
+      (claims.firebase && claims.firebase.sign_in_provider === "anonymous")) {
+    throw unauthorized();
+  }
+
+  if (!firebaseCertificates || Date.now() >= firebaseCertificatesExpiresAt) {
+    if (!firebaseCertificateFetch) {
+      firebaseCertificateFetch = (async function () {
+        const response = await fetch("https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com", {
+          signal: AbortSignal.timeout(8000),
+          headers: { "Accept": "application/json" }
+        });
+        if (!response.ok) throw new Error("Unable to retrieve Firebase verification certificates");
+        const certificates = await response.json();
+        const cacheControl = response.headers.get("cache-control") || "";
+        const match = cacheControl.match(/max-age=(\d+)/i);
+        const maxAgeSeconds = match ? Math.max(60, Math.min(Number(match[1]), 21600)) : 300;
+        firebaseCertificates = certificates;
+        firebaseCertificatesExpiresAt = Date.now() + maxAgeSeconds * 1000;
+        return certificates;
+      })().finally(function () { firebaseCertificateFetch = null; });
+    }
+    try {
+      await firebaseCertificateFetch;
+    } catch (_) {
+      const e = new Error("Não foi possível verificar sua sessão com o Firebase. Tente novamente em instantes.");
+      e.status = 503;
+      throw e;
+    }
+  }
+
+  const certificate = firebaseCertificates && firebaseCertificates[header.kid];
+  if (!certificate) {
+    firebaseCertificates = null;
+    firebaseCertificatesExpiresAt = 0;
+    try {
+      await verifyFirebaseIdToken(idToken);
+      return claims;
+    } catch (_) { throw unauthorized(); }
+  }
+  const verified = crypto.verify(
+    "RSA-SHA256",
+    Buffer.from(parts[0] + "." + parts[1], "utf8"),
+    certificate,
+    signature
+  );
+  if (!verified) throw unauthorized();
+  return claims;
 }
 
 async function resolveProvider(req, requested) {
   const environmentKey = process.env.GEMINI_API_KEY;
   const idToken = getBearer(req);
+  const user = await verifyFirebaseIdToken(idToken);
+  const hasSecureStorage = Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON && process.env.INTEGRATIONS_ENCRYPTION_KEY);
 
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON || !process.env.INTEGRATIONS_ENCRYPTION_KEY) {
+  // The server-level Gemini key is a fallback for authenticated users only.
+  // Secret keys remain on the server; the frontend never receives them.
+  if (!hasSecureStorage) {
     if (requested === "auto" && environmentKey) {
       return { provider: "gemini", credentials: { apiKey: environmentKey }, fromEnvironment: true };
     }
     throw new Error("SETUP_REQUIRED");
   }
-  if (!idToken) {
+
+  let services;
+  try {
+    services = getAdmin();
+  } catch (_) {
     if (requested === "auto" && environmentKey) {
       return { provider: "gemini", credentials: { apiKey: environmentKey }, fromEnvironment: true };
     }
-    const e = new Error("Entre na Forja AI para usar suas integrações.");
-    e.status = 401;
-    throw e;
-  }
-
-  let services;
-  let user;
-  try {
-    services = getAdmin();
-    user = await services.auth.verifyIdToken(idToken);
-  } catch (error) {
-    if (error.message === "SETUP_REQUIRED") {
-      if (requested === "auto" && environmentKey) return { provider: "gemini", credentials: { apiKey: environmentKey }, fromEnvironment: true };
-      throw error;
-    }
-    const e = new Error("Sua sessão expirou. Entre novamente na Forja AI.");
-    e.status = 401;
-    throw e;
-  }
-  if (!user.uid || (user.firebase && user.firebase.sign_in_provider === "anonymous")) {
-    const e = new Error("Entre com uma conta válida para gerar aplicativos.");
-    e.status = 401;
-    throw e;
+    throw new Error("SETUP_REQUIRED");
   }
 
   const order = requested === "auto" ? AI_PROVIDERS : [requested];
   for (const provider of order) {
-    const snapshot = await services.db.collection("users").doc(user.uid).collection("integrations").doc(provider).get();
+    const snapshot = await services.db.collection("users").doc(user.sub).collection("integrations").doc(provider).get();
     if (!snapshot.exists) continue;
     const record = snapshot.data() || {};
     if (record.status !== "connected" || !record.encryptedCredentials) continue;
     try {
       const credentials = decryptCredentials(record.encryptedCredentials);
-      if ((provider === "gemini" || provider === "openai" || provider === "anthropic" || provider === "groq" || provider === "openrouter") && (credentials.apiKey || credentials.token)) {
+      if (AI_PROVIDERS.includes(provider) && credentials.apiKey) {
         return { provider: provider, credentials: credentials, model: record.model || null, accountLabel: record.accountLabel || provider };
       }
     } catch (_) {
