@@ -468,8 +468,32 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     var status = document.createElement("div");
     status.id = "forja-preview-status";
-    status.style.cssText = "margin:16px;padding:18px;background:#fff;border:1px solid #E9DFD8;border-radius:14px;color:#6B5D63;box-shadow:0 8px 24px rgba(32,25,29,.04);min-height:24px";
-    status.textContent = "Descreva o aplicativo no campo principal e clique na seta para cima para começar.";
+    status.style.cssText = "flex:1;min-height:260px;margin:16px;display:flex;align-items:center;justify-content:center;padding:28px;background:radial-gradient(ellipse at 50% 38%,#2b1719 0%,#171416 48%,#111012 100%);border:1px solid #3a272a;border-radius:16px;color:#f8f3f4;box-shadow:0 16px 40px rgba(18,12,14,.12);text-align:center;overflow:auto";
+    var loaderWrap = document.createElement("div");
+    loaderWrap.style.cssText = "width:min(100%,420px);display:flex;flex-direction:column;align-items:center;gap:16px";
+    var mark = document.createElement("div");
+    mark.style.cssText = "width:58px;height:58px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,#f04b35,#a51f20);box-shadow:0 8px 28px rgba(201,63,18,.32),inset 0 1px 0 rgba(255,255,255,.28)";
+    mark.innerHTML = '<svg viewBox="0 0 64 64" width="34" height="34" aria-hidden="true"><path d="M34 5 13 34h15l-3 25 26-34H35z" fill="#fff"/><path d="m34 5-6 29h13l-6 25 26-34H43z" fill="#ffd7ca" opacity=".82"/></svg>';
+    var loaderTitle = document.createElement("div");
+    loaderTitle.textContent = "A Forja está trabalhando";
+    loaderTitle.style.cssText = "font-size:20px;font-weight:750;letter-spacing:-.04em";
+    var loaderMessage = document.createElement("div");
+    loaderMessage.id = "forja-preview-status-message";
+    loaderMessage.textContent = "Descreva seu aplicativo e clique na seta para começar.";
+    loaderMessage.style.cssText = "font-size:13px;line-height:1.6;color:#b9a9ad;max-width:340px;overflow-wrap:anywhere";
+    var progressTrack = document.createElement("div");
+    progressTrack.style.cssText = "height:4px;width:min(100%,260px);background:#3a292d;border-radius:99px;overflow:hidden;margin-top:3px";
+    var progressBar = document.createElement("div");
+    progressBar.style.cssText = "height:100%;width:38%;border-radius:99px;background:linear-gradient(90deg,#c93f12,#ff785e);animation:forja-progress 1.5s ease-in-out infinite alternate";
+    progressTrack.appendChild(progressBar);
+    var loaderHint = document.createElement("div");
+    loaderHint.textContent = "Preparando interface · componentes · interações";
+    loaderHint.style.cssText = "font-size:11px;letter-spacing:.02em;color:#806d72";
+    loaderWrap.append(mark,loaderTitle,loaderMessage,progressTrack,loaderHint);
+    status.appendChild(loaderWrap);
+    var loaderStyle = document.createElement("style");
+    loaderStyle.textContent = "@keyframes forja-progress{from{transform:translateX(-45%);width:38%}to{transform:translateX(165%);width:58%}}@media(max-width:560px){#forja-preview-status{margin:10px;padding:20px;min-height:220px}}";
+    document.head.appendChild(loaderStyle);
     var frame = document.createElement("iframe");
     frame.id = "forja-preview-frame";
     frame.title = "Prévia interativa do aplicativo gerado";
@@ -481,10 +505,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     codeArea.setAttribute("aria-label", "Código HTML gerado");
     codeArea.style.cssText = "display:none;flex:1;min-height:0;width:calc(100% - 32px);margin:16px;padding:14px;box-sizing:border-box;resize:none;border:1px solid #E9DFD8;border-radius:12px;background:#20191D;color:#F9F3F5;font:12px/1.5 ui-monospace,SFMono-Regular,monospace;white-space:pre;overflow:auto";
     panel.append(header, toolbar, status, frame, codeArea);
+    frame.addEventListener("load", function(){
+      if (!drawer || drawer.frame !== frame || !drawer.isRendering) return;
+      drawer.isRendering = false;
+      drawer.status.style.display = activeTab === "preview" ? "none" : "flex";
+      if (activeTab === "preview") frame.style.display = "block";
+    });
     overlay.appendChild(panel);
     overlay.addEventListener("click", function(e){ if(e.target === overlay) closeDrawer(); });
     document.body.appendChild(overlay);
-    drawer = {overlay:overlay,panel:panel,status:status,frame:frame,codeArea:codeArea,previewTab:previewTab,codeTab:codeTab};
+    drawer = {overlay:overlay,panel:panel,status:status,frame:frame,codeArea:codeArea,previewTab:previewTab,codeTab:codeTab,isRendering:false,statusMessage:loaderMessage};
     return drawer;
   }
 
@@ -506,9 +536,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     activeTab = tab;
     if (!drawer) return;
     var isPreview = tab === "preview";
-    drawer.frame.style.display = isPreview ? "block" : "none";
+    drawer.frame.style.display = isPreview && !drawer.isRendering ? "block" : "none";
     drawer.codeArea.style.display = isPreview ? "none" : "block";
-    drawer.status.style.display = generatedCode ? "none" : "block";
+    drawer.status.style.display = (generatedCode && !drawer.isRendering) ? "none" : "flex";
     drawer.previewTab.style.background = isPreview ? "#C93F12" : "#fff";
     drawer.previewTab.style.color = isPreview ? "#fff" : "#30252B";
     drawer.previewTab.style.borderColor = isPreview ? "#C93F12" : "#E8DCD6";
@@ -533,19 +563,21 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     openDrawer();
     var d = drawer || createDrawer();
-    d.status.style.display = "block";
-    d.status.style.color = "#6B5D63";
-    d.status.textContent = "Preparando o projeto…";
+    generatedCode = "";
+    d.isRendering = true;
+    d.status.style.display = "flex";
+    d.status.style.color = "#f8f3f4";
+    d.statusMessage.textContent = "Entendendo sua descrição e preparando a estrutura do projeto…";
     d.frame.style.display = "none";
+    d.codeArea.value = "";
     d.codeArea.style.display = "none";
+    showTab("preview");
     trigger.disabled = true;
     trigger.style.opacity = ".55";
     trigger.setAttribute("aria-busy", "true");
 
     try {
-      d.status.textContent = "Enviando sua descrição para o Gemini…";
-      d.codeArea.value = "";
-      showTab("code");
+      d.statusMessage.textContent = "Conectando ao modelo de IA para gerar o aplicativo…";
       var response = await fetch("/api/generate", {
         method: "POST",
         headers: {"Content-Type":"application/json","Accept":"text/event-stream"},
@@ -568,7 +600,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         var buffer = "";
         var streamed = "";
         var finished = false;
-        d.status.textContent = "Gemini está escrevendo o código do aplicativo…";
+        d.statusMessage.textContent = "A IA está escrevendo a interface e as interações…";
         while (!finished) {
           var part = await reader.read();
           if (part.done) break;
@@ -584,7 +616,7 @@ document.addEventListener('DOMContentLoaded', async function() {
               if (eventData.type === "chunk" && eventData.text) {
                 streamed += eventData.text;
                 d.codeArea.value = streamed;
-                d.status.textContent = "Aplicativo sendo criado em tempo real · " + streamed.length.toLocaleString("pt-BR") + " caracteres recebidos";
+                d.statusMessage.textContent = "Gerando o aplicativo em tempo real · " + streamed.length.toLocaleString("pt-BR") + " caracteres de código recebidos.";
                 d.codeArea.scrollTop = d.codeArea.scrollHeight;
               } else if (eventData.type === "done") {
                 generatedCode = eventData.code || streamed;
@@ -598,15 +630,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!generatedCode && streamed.trim()) generatedCode = streamed;
       }
       if (typeof generatedCode !== "string" || !generatedCode.trim()) throw new Error("A IA terminou sem retornar código HTML. Tente novamente.");
-      d.status.textContent = "Código recebido. Montando a prévia interativa…";
+      d.statusMessage.textContent = "Código pronto. Renderizando a prévia interativa…";
       d.codeArea.value = generatedCode;
+      d.isRendering = true;
+      d.frame.style.display = "none";
+      d.status.style.display = "flex";
       d.frame.srcdoc = generatedCode;
-      d.status.style.display = "none";
       showTab("preview");
     } catch (error) {
-      d.status.style.display = "block";
-      d.status.style.color = "#9C2F0A";
-      d.status.textContent = (error && error.message ? error.message : "Ocorreu um erro inesperado.") + " Você pode tentar novamente clicando na seta para cima.";
+      d.isRendering = false;
+      d.status.style.display = "flex";
+      d.status.style.color = "#ffd8d2";
+      d.statusMessage.textContent = (error && error.message ? error.message : "Ocorreu um erro inesperado.") + " Você pode tentar novamente clicando na seta para cima.";
+      d.frame.style.display = "none";
     } finally {
       trigger.disabled = false;
       trigger.style.opacity = "1";
