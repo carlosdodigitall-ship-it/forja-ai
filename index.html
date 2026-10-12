@@ -739,6 +739,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   let accountChip = null;
   let authMode = "login";
   let profileCache = null;
+  let profilePromise = null;
+  let profilePromiseUid = null;
 
   function defaultProfile(user) {
     return {
@@ -751,16 +753,26 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   async function ensureProfile(user) {
-    const ref = doc(db, "users", user.uid);
-    const snapshot = await getDoc(ref);
-    if (snapshot.exists()) {
-      profileCache = snapshot.data();
+    if (profilePromise && profilePromiseUid === user.uid) return profilePromise;
+    profilePromiseUid = user.uid;
+    profilePromise = (async () => {
+      const ref = doc(db, "users", user.uid);
+      const snapshot = await getDoc(ref);
+      if (snapshot.exists()) {
+        profileCache = snapshot.data();
+        return profileCache;
+      }
+      const profile = defaultProfile(user);
+      await setDoc(ref, profile);
+      profileCache = { ...profile, createdAt: new Date(), updatedAt: new Date() };
       return profileCache;
+    })();
+    try {
+      return await profilePromise;
+    } finally {
+      profilePromise = null;
+      profilePromiseUid = null;
     }
-    const profile = defaultProfile(user);
-    await setDoc(ref, profile);
-    profileCache = { ...profile, createdAt: new Date(), updatedAt: new Date() };
-    return profileCache;
   }
 
   function ensureAccountChip() {
@@ -854,10 +866,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (authMode === "signup") {
           userCredential = await createUserWithEmailAndPassword(auth, email, password);
           try { await sendEmailVerification(userCredential.user); } catch (verificationError) { console.warn("Não foi possível enviar e-mail de verificação:", verificationError); }
-          const profile = defaultProfile(userCredential.user);
-          profile.displayName = displayName;
-          await setDoc(doc(db, "users", userCredential.user.uid), profile);
-          profileCache = profile;
+          await ensureProfile(userCredential.user);
+          if (displayName) {
+            await setDoc(doc(db, "users", userCredential.user.uid), {
+              displayName: displayName,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+            if (profileCache) profileCache.displayName = displayName;
+          }
         } else {
           userCredential = await signInWithEmailAndPassword(auth, email, password);
           await ensureProfile(userCredential.user);
