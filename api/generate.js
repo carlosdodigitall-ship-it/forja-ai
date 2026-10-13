@@ -449,7 +449,7 @@ async function forwardStream(res, upstream, provider, model) {
       send({ type:"error", error:"O provedor terminou sem retornar código HTML. Confira o modelo e tente novamente." });
       return res.end();
     }
-    if (!/<html[\\s>]/i.test(generated) || !/<\\/html\\s*>/i.test(generated)) {
+    if (!/<html[\s>]/i.test(generated) || !/<\/html\s*>/i.test(generated)) {
       send({ type:"error", error:"A IA encerrou a resposta antes de concluir o documento HTML. O código anterior foi preservado. Tente novamente com uma solicitação menor." });
       return res.end();
     }
