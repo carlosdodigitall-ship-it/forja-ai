@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const resourceScript = '<script>window.__resources = ' +
       JSON.stringify(resourceMap).replace(/<\//g, '<\\/') +
       ';</' + 'script>';
-    const themeStyle = '<style id="forja-constellation-theme">
+    const themeStyle = `<style id="forja-constellation-theme">
 :root{color-scheme:dark;--forja-bg:#10090f;--forja-panel:#1a1019;--forja-panel-2:#21121f;--forja-border:#482235;--forja-red:#e34a62;--forja-red-2:#a82045;--forja-text:#fff1f5;--forja-muted:#c3a6b3}
 html,body{background:#10090f!important;color:#fff1f5!important}
 body{background-image:radial-gradient(ellipse at 12% 8%,rgba(181,35,75,.25),transparent 35%),radial-gradient(ellipse at 88% 20%,rgba(104,32,92,.18),transparent 32%),radial-gradient(ellipse at 55% 100%,rgba(107,23,53,.18),transparent 40%)!important}
@@ -333,7 +333,7 @@ button{accent-color:#e34a62}
 #forja-preview-status{background:radial-gradient(ellipse at 50% 0,rgba(174,35,79,.18),transparent 58%),#170d17!important;border-color:#482235!important;color:#fff1f5!important}
 #forja-preview-code{background:#10090f!important;border-color:#482235!important;color:#ffeef4!important}
 @media(max-width:760px){#forja-auth-overlay{padding:14px!important}#forja-auth-overlay>main{padding:25px!important}}
-</style>';
+</style>`;
 
     // Inject after <head> so the DOCTYPE stays first; prepending the script
     // would push the parser into quirks mode. DOMParser always emits a <head>
