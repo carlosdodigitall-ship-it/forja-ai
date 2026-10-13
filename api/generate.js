@@ -144,6 +144,18 @@ async function verifyFirebaseIdToken(idToken) {
   return claims;
 }
 
+function getBearer(req) {
+  const headers = req && req.headers ? req.headers : {};
+  const authorization = headers.authorization || headers.Authorization || "";
+  const match = typeof authorization === "string" ? authorization.match(/^Bearer\s+(.+)$/i) : null;
+  if (!match) {
+    const e = new Error("Sua sessão não foi enviada. Atualize a página, entre novamente e tente criar o aplicativo.");
+    e.status = 401;
+    throw e;
+  }
+  return match[1].trim();
+}
+
 async function resolveProvider(req, requested) {
   const environmentKey = process.env.GEMINI_API_KEY;
   const idToken = getBearer(req);
