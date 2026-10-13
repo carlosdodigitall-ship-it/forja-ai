@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var panel = document.createElement("aside");
     panel.id = "forja-preview-drawer";
     panel.setAttribute("aria-label", "Prévia do aplicativo");
-    panel.style.cssText = "position:absolute;top:0;right:0;width:min(780px,94vw);max-width:100vw;height:100%;height:100dvh;max-height:100dvh;background:#FAF9F5;color:#20191D;box-shadow:-16px 0 50px rgba(0,0,0,.18);display:flex;flex-direction:column;min-height:0;transform:translateX(100%);transition:transform .22s ease;font:14px/1.45 system-ui,sans-serif;overflow:hidden";
+    panel.style.cssText = "position:absolute;top:0;right:0;width:min(1440px,98vw);max-width:100vw;height:100%;height:100dvh;max-height:100dvh;background:#FAF9F5;color:#20191D;box-shadow:-16px 0 50px rgba(0,0,0,.18);display:flex;flex-direction:column;min-height:0;transform:translateX(100%);transition:transform .22s ease;font:14px/1.45 system-ui,sans-serif;overflow:hidden";
     var header = document.createElement("header");
     header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:#fff;border-bottom:1px solid #E9DFD8";
     var titleWrap = document.createElement("div");
@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     loaderWrap.append(mark,loaderTitle,loaderMessage,progressTrack,loaderHint);
     status.appendChild(loaderWrap);
     var loaderStyle = document.createElement("style");
-    loaderStyle.textContent = "@keyframes forja-progress{from{transform:translateX(-45%);width:38%}to{transform:translateX(165%);width:58%}}@media(max-width:560px){#forja-preview-status{margin:8px;padding:16px;min-height:180px}#forja-preview-drawer header{padding:12px}#forja-preview-drawer header div{max-width:58vw}#forja-preview-drawer header div div:first-child{font-size:16px}#forja-preview-drawer button{font-size:12px;padding:8px 9px}#forja-preview-drawer textarea{margin:8px;width:calc(100% - 16px)}}";
+    loaderStyle.textContent = "@keyframes forja-progress{from{transform:translateX(-45%);width:38%}to{transform:translateX(165%);width:58%}}#forja-preview-workspace{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}#forja-preview-column{display:flex;flex:1 1 auto;flex-direction:column;min-width:0;min-height:0;overflow:hidden}#forja-build-chat{display:flex;flex:0 0 340px;width:340px;max-width:42%;flex-direction:column;min-height:0;border-right:1px solid #E9DFD8;background:#fff}#forja-build-chat-messages{flex:1;min-height:0;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#fbf9f7}#forja-build-chat .forja-build-bubble{max-width:100%;padding:10px 12px;border-radius:12px;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}#forja-build-chat .assistant{background:#fff;border:1px solid #eee3dc;color:#3b3032;align-self:flex-start}#forja-build-chat .user{background:#c93f12;color:#fff;align-self:flex-end}#forja-build-chat-input{display:block;width:100%;resize:vertical;min-height:70px;max-height:150px;padding:10px;border:1px solid #e6d9d3;border-radius:10px;font:13px/1.4 system-ui,sans-serif;outline-color:#c93f12}#forja-build-chat-send{border:0;border-radius:10px;background:#c93f12;color:#fff;font-weight:700;padding:10px 14px;cursor:pointer}#forja-build-chat-send:disabled{opacity:.55;cursor:wait}@media(max-width:760px){#forja-preview-drawer{width:100vw}#forja-preview-workspace{flex-direction:column-reverse}#forja-build-chat{flex:0 0 42%;width:100%;max-width:none;border-right:0;border-top:1px solid #E9DFD8}#forja-build-chat-messages{padding:8px}#forja-build-chat-input{min-height:46px}#forja-preview-status{margin:8px;padding:16px;min-height:140px}#forja-preview-drawer header{padding:10px}#forja-preview-drawer header div{max-width:58vw}#forja-preview-drawer header div div:first-child{font-size:16px}#forja-preview-drawer button{font-size:12px;padding:8px 9px}#forja-preview-drawer textarea{margin:8px;width:calc(100% - 16px)}}";
     document.head.appendChild(loaderStyle);
     var frame = document.createElement("iframe");
     frame.id = "forja-preview-frame";
@@ -510,7 +510,95 @@ document.addEventListener('DOMContentLoaded', async function() {
     codeArea.readOnly = true;
     codeArea.setAttribute("aria-label", "Código HTML gerado");
     codeArea.style.cssText = "display:none;flex:1;min-height:0;width:calc(100% - 32px);margin:16px;padding:14px;box-sizing:border-box;resize:none;border:1px solid #E9DFD8;border-radius:12px;background:#20191D;color:#F9F3F5;font:12px/1.5 ui-monospace,SFMono-Regular,monospace;white-space:pre;overflow:auto";
-    panel.append(header, toolbar, status, previewStage, codeArea);
+    var workspace = document.createElement("div");
+    workspace.id = "forja-preview-workspace";
+    var previewColumn = document.createElement("div");
+    previewColumn.id = "forja-preview-column";
+    previewColumn.append(status, previewStage, codeArea);
+
+    var chatColumn = document.createElement("section");
+    chatColumn.id = "forja-build-chat";
+    chatColumn.setAttribute("aria-label", "Chat durante a criação");
+    var chatHeader = document.createElement("div");
+    chatHeader.style.cssText = "padding:14px 14px 12px;border-bottom:1px solid #eee3dc;background:#fff";
+    chatHeader.innerHTML = '<strong style="display:block;font-size:14px;color:#30252B">✦ Chat da criação</strong><span style="display:block;font-size:11px;color:#8b7777;margin-top:4px">Converse com a IA enquanto a prévia é preparada</span>';
+    var chatMessages = document.createElement("div");
+    chatMessages.id = "forja-build-chat-messages";
+    chatMessages.setAttribute("aria-live", "polite");
+    var initialBubble = document.createElement("div");
+    initialBubble.className = "forja-build-bubble assistant";
+    initialBubble.textContent = "Descreva ajustes, tire dúvidas ou informe erros aqui. A prévia e o carregamento ficam ao lado.";
+    chatMessages.appendChild(initialBubble);
+    var chatForm = document.createElement("div");
+    chatForm.style.cssText = "padding:10px;display:flex;flex-direction:column;gap:8px;border-top:1px solid #eee3dc;background:#fff";
+    var chatInput = document.createElement("textarea");
+    chatInput.id = "forja-build-chat-input";
+    chatInput.rows = 3;
+    chatInput.maxLength = 3000;
+    chatInput.placeholder = "Converse com a IA sobre este projeto...";
+    chatInput.setAttribute("aria-label", "Mensagem para o chat da criação");
+    var chatActions = document.createElement("div");
+    chatActions.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px";
+    var chatHint = document.createElement("span");
+    chatHint.textContent = "Enter para enviar · Shift+Enter para nova linha";
+    chatHint.style.cssText = "font-size:10px;color:#8b7777";
+    var chatSend = document.createElement("button");
+    chatSend.id = "forja-build-chat-send";
+    chatSend.type = "button";
+    chatSend.textContent = "Enviar";
+    chatActions.append(chatHint, chatSend);
+    chatForm.append(chatInput, chatActions);
+    chatColumn.append(chatHeader, chatMessages, chatForm);
+    workspace.append(chatColumn, previewColumn);
+    panel.append(header, toolbar, workspace);
+
+    var buildChatHistory = [];
+    function addBuildChatBubble(text, role) {
+      var bubbleEl = document.createElement("div");
+      bubbleEl.className = "forja-build-bubble " + (role === "user" ? "user" : "assistant");
+      bubbleEl.textContent = text;
+      chatMessages.appendChild(bubbleEl);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return bubbleEl;
+    }
+    async function sendBuildChatMessage() {
+      var message = chatInput.value.trim();
+      if (!message || chatSend.disabled) return;
+      var currentUser = window.forjaFirebase && window.forjaFirebase.currentUser;
+      if (!currentUser) {
+        addBuildChatBubble("Sua sessão não foi localizada. Entre novamente na Forja AI e tente enviar a mensagem.", "assistant");
+        return;
+      }
+      chatInput.value = "";
+      buildChatHistory.push({role:"user",content:message});
+      addBuildChatBubble(message, "user");
+      var waitingBubble = addBuildChatBubble("Analisando sua mensagem…", "assistant");
+      chatSend.disabled = true;
+      chatSend.textContent = "…";
+      try {
+        var token = await currentUser.getIdToken();
+        var chatResponse = await fetch("/api/chat", {
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+          body:JSON.stringify({messages:buildChatHistory.slice(-12).concat([{role:"assistant",content:"Contexto: o usuário está criando um aplicativo na Forja AI. A geração e a prévia aparecem nesta mesma janela dividida."}]).slice(-12)})
+        });
+        var chatData = await chatResponse.json().catch(function(){return {};});
+        if (!chatResponse.ok) throw new Error(chatData.error || "Não foi possível obter uma resposta.");
+        waitingBubble.textContent = chatData.answer || "A IA não retornou uma resposta.";
+        buildChatHistory.push({role:"assistant",content:waitingBubble.textContent});
+      } catch(chatError) {
+        waitingBubble.textContent = (chatError && chatError.message) || "Falha ao enviar. Tente novamente.";
+        buildChatHistory.pop();
+      } finally {
+        chatSend.disabled = false;
+        chatSend.textContent = "Enviar";
+        chatInput.focus();
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    }
+    chatSend.addEventListener("click", sendBuildChatMessage);
+    chatInput.addEventListener("keydown", function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendBuildChatMessage();}});
+
     frame.addEventListener("load", function(){
       if (!drawer || drawer.frame !== frame || !drawer.isRendering) return;
       drawer.isRendering = false;
@@ -520,7 +608,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     overlay.appendChild(panel);
     overlay.addEventListener("click", function(e){ if(e.target === overlay) closeDrawer(); });
     document.body.appendChild(overlay);
-    drawer = {overlay:overlay,panel:panel,status:status,frame:frame,previewStage:previewStage,codeArea:codeArea,previewTab:previewTab,codeTab:codeTab,desktopView:desktopView,mobileView:mobileView,previewSize:"desktop",isRendering:false,statusMessage:loaderMessage};
+    drawer = {overlay:overlay,panel:panel,status:status,frame:frame,previewStage:previewStage,codeArea:codeArea,previewTab:previewTab,codeTab:codeTab,desktopView:desktopView,mobileView:mobileView,previewSize:"desktop",isRendering:false,statusMessage:loaderMessage,chatMessages:chatMessages,chatInput:chatInput,chatSend:chatSend};
     setPreviewSize("desktop");
     return drawer;
   }
