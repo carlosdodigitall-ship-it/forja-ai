@@ -292,7 +292,10 @@ module.exports = async function handler(req, res) {
           lastValidatedAt: value.lastValidatedAt && value.lastValidatedAt.toDate ? value.lastValidatedAt.toDate().toISOString() : null
         };
       });
-      return send(res, 200, { integrations });
+      const availableProviders = [];
+      if (process.env.GEMINI_API_KEY) availableProviders.push("gemini");
+      if (process.env.OPENAI_API_KEY) availableProviders.push("openai");
+      return send(res, 200, { integrations, availableProviders });
     }
 
     if (req.method === "POST" && action === "connect") {
