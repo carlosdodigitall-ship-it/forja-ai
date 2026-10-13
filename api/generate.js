@@ -234,52 +234,102 @@ async function resolveProvider(req, requested) {
 }
 
 async function requestGemini(apiKey, prompt) {
-  // Prioriza os modelos configurados, mas mantém alternativas automáticas caso
-  // um modelo esteja indisponível ou a configuração do Vercel esteja desatualizada.
-  // Prioriza modelos atuais e não permite que uma variável antiga da Vercel
-  // faça a aplicação tentar primeiro um modelo 2.5 indisponível para novas contas.
+  // Orçamento total da tentativa Gemini: menor que o limite de 300 s da função Vercel.
+  // Limitar apenas a UI deixa a função rodando em segundo plano; cada modelo também
+  // precisa ter um prazo para começar a responder.
+  const totalBudgetMs = 220000;
+  const perModelStartMs = 30000;
+  const deadlineAt = Date.now() + totalBudgetMs;
   const configuredModels = (process.env.FORJA_GEMINI_MODELS || "")
     .split(",").map(function(v){return v.trim();}).filter(Boolean);
-  const preferredModels = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3-flash-preview"];
+  const preferredModels = [
+    "gemini-3.8-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite"
+  ];
   const models = Array.from(new Set(preferredModels.concat(configuredModels).filter(function(model){
-    return !/^gemini-2\.5-flash$/i.test(model);
-  })));
-  let upstream;
-  let detail = "";
+    return !/^gemini-2\\.5-flash$/i.test(model);
+  }))).slice(0, 4);
   const failures = [];
+
   for (const candidate of models) {
-    // Sobrecarga temporária é comum; repita a chamada antes de trocar de modelo.
-    for (let attempt = 0; attempt < 3; attempt++) {
+    if (Date.now() >= deadlineAt - 2000) break;
+    let movedToNextModel = false;
+
+    // No máximo uma nova tentativa para 429/503: não repetir indefinidamente
+    // cada modelo enquanto a requisição inteira continua aberta.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const remainingMs = deadlineAt - Date.now();
+      if (remainingMs < 2000) break;
+      const controller = new AbortController();
+      let headerTimedOut = false;
+      const headerTimer = setTimeout(function(){
+        headerTimedOut = true;
+        controller.abort();
+      }, Math.min(perModelStartMs, Math.max(1000, remainingMs - 1000)));
+
+      let upstream;
       try {
+        const generationConfig = {
+          temperature: 0.25,
+          maxOutputTokens: 8192,
+          responseMimeType: "text/plain"
+        };
+        // Menor latência para geração de UI; evita o raciocínio médio padrão
+        // do Gemini 3.8 em tarefas que precisam retornar código executável.
+        if (/^gemini-3\\.8-flash$/i.test(candidate)) {
+          generationConfig.thinkingConfig = { thinkingLevel: "low" };
+        }
         upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(candidate) + ":streamGenerateContent?alt=sse", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.25, maxOutputTokens: 8192, responseMimeType: "text/plain" }
+            generationConfig: generationConfig
           }),
-          signal: AbortSignal.timeout(120000)
+          signal: controller.signal
         });
       } catch (networkError) {
-        const reason = networkError && networkError.message ? String(networkError.message).slice(0, 140) : "erro de rede sem detalhes";
-        detail = "Falha de conexão com " + candidate + ": " + reason;
-        failures.push(detail);
-        if (attempt < 2) {
-          await new Promise(function(resolve){ setTimeout(resolve, 700 * (attempt + 1)); });
-          continue;
-        }
+        clearTimeout(headerTimer);
+        const reason = headerTimedOut
+          ? "o modelo não começou a responder em " + Math.round(Math.min(perModelStartMs, remainingMs) / 1000) + " segundos"
+          : (networkError && networkError.message ? String(networkError.message).slice(0, 140) : "erro de rede sem detalhes");
+        failures.push(candidate + ": " + reason);
+        controller.abort();
+        // Um timeout de início não ganha nada com outra tentativa no mesmo modelo.
+        movedToNextModel = true;
         break;
       }
-      if (upstream.ok) return { upstream: upstream, provider: "gemini", model: candidate };
+      clearTimeout(headerTimer);
+
+      if (upstream.ok) {
+        // Após os headers chegarem, deixa o stream ativo até o prazo total,
+        // não só até o prazo curto para iniciar a resposta.
+        const remainingForStream = Math.max(1, deadlineAt - Date.now());
+        const streamTimer = setTimeout(function(){ controller.abort(); }, remainingForStream);
+        return {
+          upstream: upstream,
+          provider: "gemini",
+          model: candidate,
+          controller: controller,
+          streamTimer: streamTimer,
+          deadlineAt: deadlineAt
+        };
+      }
+
       const data = await upstream.json().catch(function(){return {};});
-      detail = data && data.error && data.error.message ? String(data.error.message).slice(0,300) : "HTTP " + upstream.status;
+      const detail = data && data.error && data.error.message ? String(data.error.message).slice(0,300) : "HTTP " + upstream.status;
       failures.push(candidate + " (HTTP " + upstream.status + "): " + detail);
+      controller.abort();
+
       const modelUnavailable = /model .*not found|not available to new users|no longer available to new users|is not supported|unknown model|model.*not available|unsupported model/i.test(detail);
-      const temporaryOverload = upstream.status === 429 || upstream.status === 503 ||
+      const temporaryOverload = upstream.status === 408 || upstream.status === 429 || upstream.status === 500 ||
+        upstream.status === 502 || upstream.status === 503 || upstream.status === 504 ||
         /high demand|overloaded|temporarily unavailable|try again later|resource exhausted/i.test(detail);
-      if (temporaryOverload && attempt < 2) {
-        await new Promise(function(resolve){ setTimeout(resolve, 900 * (attempt + 1)); });
+      if (temporaryOverload && attempt === 0 && Date.now() < deadlineAt - 3000) {
+        await new Promise(function(resolve){ setTimeout(resolve, 700); });
         continue;
       }
       if (![408,429,500,502,503,504].includes(upstream.status) && !modelUnavailable) {
@@ -287,13 +337,18 @@ async function requestGemini(apiKey, prompt) {
         e.status = upstream.status === 401 || upstream.status === 403 ? 502 : upstream.status;
         throw e;
       }
+      movedToNextModel = true;
       break;
     }
+    if (movedToNextModel) continue;
   }
-  const overloaded = failures.some(function(value){ return /high demand|overloaded|temporarily unavailable|try again later|resource exhausted|HTTP 429|HTTP 503/i.test(value); });
+
+  const overloaded = failures.some(function(value){
+    return /high demand|overloaded|temporarily unavailable|try again later|resource exhausted|HTTP 429|HTTP 503|não começou a responder/i.test(value);
+  });
   const e = new Error(overloaded
-    ? "Os modelos Gemini estão temporariamente sobrecarregados, mesmo após novas tentativas. Aguarde alguns minutos e tente novamente. Detalhes: " + failures.slice(-4).join(" | ")
-    : "Nenhum modelo Gemini respondeu. " + (failures.slice(-4).join(" | ") || detail));
+    ? "A geração não iniciou em tempo hábil ou o Gemini está sobrecarregado. O sistema limitou as tentativas para evitar travamento. Aguarde um pouco e tente de novo. Detalhes: " + failures.slice(-4).join(" | ")
+    : "Nenhum modelo Gemini respondeu. " + (failures.slice(-4).join(" | ") || "Nenhum modelo ficou disponível antes do limite de tempo."));
   e.status = 503;
   throw e;
 }
@@ -382,7 +437,7 @@ function startEventStream(res) {
   if (res.flushHeaders) res.flushHeaders();
 }
 
-async function forwardStream(res, upstream, provider, model) {
+async function forwardStream(res, upstream, provider, model, controller, streamTimer, deadlineAt) {
   startEventStream(res);
   function send(event) { res.write("data: " + JSON.stringify(event) + "\n\n"); }
   let buffer = "";
@@ -455,9 +510,16 @@ async function forwardStream(res, upstream, provider, model) {
     }
     send({ type:"done", code:generated, model:model, provider:provider });
     return res.end();
-  } catch (_) {
-    try { send({ type:"error", error:"A conexão com o provedor foi interrompida durante a geração. Tente novamente." }); } catch (_) {}
+  } catch (streamError) {
+    const exceededDeadline = Boolean(deadlineAt && Date.now() >= deadlineAt - 1000);
+    const aborted = Boolean(controller && controller.signal && controller.signal.aborted);
+    const message = exceededDeadline || aborted
+      ? "A geração excedeu o limite de tempo seguro. O código incompleto não foi aplicado. Tente um pedido menor ou verifique os limites da API Gemini."
+      : "A conexão com o provedor foi interrompida durante a geração. O código incompleto não foi aplicado; tente novamente.";
+    try { send({ type:"error", error:message }); } catch (_) {}
     return res.end();
+  } finally {
+    if (streamTimer) clearTimeout(streamTimer);
   }
 }
 
@@ -503,7 +565,7 @@ module.exports = async function handler(req, res) {
     if (selected.provider === "gemini") {
       const result = await requestGemini(apiKey, prompt);
       upstream = result.upstream;
-      return await forwardStream(res, upstream, result.provider, result.model);
+      return await forwardStream(res, upstream, result.provider, result.model, result.controller, result.streamTimer, result.deadlineAt);
     }
     if (selected.provider === "anthropic") {
       const result = await requestAnthropic(apiKey, prompt);
