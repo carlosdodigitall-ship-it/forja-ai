@@ -211,12 +211,16 @@ async function resolveProvider(req, requested) {
 }
 
 async function requestGemini(apiKey, prompt) {
-  const models = (process.env.FORJA_GEMINI_MODELS || "gemini-3.8-flash,gemini-3.6-flash").split(",").map(function(v){return v.trim();}).filter(Boolean);
+  // Prioriza os modelos configurados, mas mantém alternativas automáticas caso
+  // um modelo esteja indisponível ou a configuração do Vercel esteja desatualizada.
+  const configuredModels = (process.env.FORJA_GEMINI_MODELS || "gemini-3.8-flash,gemini-3.6-flash")
+    .split(",").map(function(v){return v.trim();}).filter(Boolean);
+  const fallbackModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
+  const models = Array.from(new Set(configuredModels.concat(fallbackModels)));
   let upstream;
   let detail = "";
-  let selected = models[0];
+  const failures = [];
   for (const candidate of models) {
-    selected = candidate;
     try {
       upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(candidate) + ":streamGenerateContent?alt=sse", {
         method: "POST",
@@ -228,20 +232,23 @@ async function requestGemini(apiKey, prompt) {
         }),
         signal: AbortSignal.timeout(60000)
       });
-    } catch (_) {
-      detail = "Falha de conexão ao tentar " + candidate + ".";
+    } catch (networkError) {
+      const reason = networkError && networkError.message ? String(networkError.message).slice(0, 140) : "erro de rede sem detalhes";
+      detail = "Falha de conexão com " + candidate + ": " + reason;
+      failures.push(detail);
       continue;
     }
     if (upstream.ok) return { upstream: upstream, provider: "gemini", model: candidate };
     const data = await upstream.json().catch(function(){return {};});
     detail = data && data.error && data.error.message ? String(data.error.message).slice(0,300) : "HTTP " + upstream.status;
+    failures.push(candidate + ": " + detail);
     if (![408,429,500,502,503,504].includes(upstream.status)) {
       const e = new Error("O Google Gemini recusou a solicitação. " + detail);
       e.status = upstream.status === 401 || upstream.status === 403 ? 502 : upstream.status;
       throw e;
     }
   }
-  const e = new Error("Os modelos Gemini estão temporariamente indisponíveis. " + detail);
+  const e = new Error("Nenhum modelo Gemini respondeu. " + (failures.slice(-3).join(" | ") || detail));
   e.status = 503;
   throw e;
 }
