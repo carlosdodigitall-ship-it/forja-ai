@@ -605,6 +605,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     trigger.style.opacity = ".55";
     trigger.setAttribute("aria-busy", "true");
 
+    var requestController = new AbortController();
+    var requestTimeout = setTimeout(function(){ requestController.abort(); }, 70000);
     try {
       d.statusMessage.textContent = "Conectando ao modelo de IA para gerar o aplicativo…";
       var response = await fetch("/api/generate", {
