@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var panel = document.createElement("aside");
     panel.id = "forja-preview-drawer";
     panel.setAttribute("aria-label", "Prévia do aplicativo");
-    panel.style.cssText = "position:absolute;top:0;right:0;width:min(1100px,100vw);max-width:100vw;height:100%;height:100dvh;max-height:100dvh;background:#FAF9F5;color:#20191D;box-shadow:-16px 0 50px rgba(0,0,0,.18);display:flex;flex-direction:column;min-height:0;transform:translateX(100%);transition:transform .22s ease;font:14px/1.45 system-ui,sans-serif;overflow:hidden";
+    panel.style.cssText = "position:absolute;top:0;right:0;width:min(780px,94vw);max-width:100vw;height:100%;height:100dvh;max-height:100dvh;background:#FAF9F5;color:#20191D;box-shadow:-16px 0 50px rgba(0,0,0,.18);display:flex;flex-direction:column;min-height:0;transform:translateX(100%);transition:transform .22s ease;font:14px/1.45 system-ui,sans-serif;overflow:hidden";
     var header = document.createElement("header");
     header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:#fff;border-bottom:1px solid #E9DFD8";
     var titleWrap = document.createElement("div");
@@ -610,7 +610,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       var response = await fetch("/api/generate", {
         method: "POST",
         headers: {"Content-Type":"application/json","Accept":"text/event-stream"},
-        body: JSON.stringify({prompt:prompt,stream:true})
+        body: JSON.stringify({prompt:prompt,stream:true}),
+        signal: requestController.signal
       });
       var contentType = response.headers.get("content-type") || "";
       if (!response.ok) {
@@ -681,6 +682,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       d.statusMessage.textContent = (error && error.message ? error.message : "Ocorreu um erro inesperado.") + " Você pode tentar novamente clicando na seta para cima.";
       d.frame.style.display = "none";
     } finally {
+      clearTimeout(requestTimeout);
       trigger.disabled = false;
       trigger.style.opacity = "1";
       trigger.removeAttribute("aria-busy");
@@ -1504,5 +1506,68 @@ document.addEventListener('DOMContentLoaded', async function() {
   else start();
 })();
 </script>
+
+<!-- Chat de suporte real da Forja AI -->
+<style>
+  #forja-support-launcher{position:fixed;right:22px;bottom:22px;z-index:2147482000;border:0;border-radius:999px;padding:13px 18px;background:#c93f12;color:#fff;font:700 14px system-ui,sans-serif;box-shadow:0 10px 28px #30130f35;cursor:pointer}
+  #forja-support-panel{position:fixed;right:22px;bottom:82px;z-index:2147482001;width:min(380px,calc(100vw - 24px));height:min(540px,calc(100dvh - 110px));display:none;flex-direction:column;overflow:hidden;border:1px solid #eadfd8;border-radius:18px;background:#fffdfa;color:#241b1d;box-shadow:0 24px 70px #20101335;font:14px/1.45 system-ui,sans-serif}
+  #forja-support-panel *{box-sizing:border-box}
+  #forja-support-messages{display:flex;flex:1;flex-direction:column;gap:10px;overflow:auto;padding:14px;background:#faf6f2}
+  .forja-support-bubble{max-width:90%;padding:10px 12px;border-radius:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+  .forja-support-user{align-self:flex-end;background:#c93f12;color:#fff;border-bottom-right-radius:4px}
+  .forja-support-assistant{align-self:flex-start;background:#fff;border:1px solid #eadfd8;color:#30252b;border-bottom-left-radius:4px}
+  #forja-support-input{flex:1;min-width:0;resize:none;border:1px solid #e5d8d0;border-radius:12px;padding:10px;font:14px system-ui,sans-serif;outline-color:#c93f12}
+  #forja-support-send{border:0;border-radius:12px;padding:0 15px;background:#c93f12;color:#fff;font-weight:700;cursor:pointer}
+  #forja-support-send:disabled{opacity:.55;cursor:wait}
+  @media(max-width:560px){#forja-support-launcher{right:12px;bottom:12px;padding:12px 15px}#forja-support-panel{right:12px;bottom:68px;width:calc(100vw - 24px);height:min(520px,calc(100dvh - 86px))}}
+</style>
+<button id="forja-support-launcher" type="button" aria-expanded="false">✦ Ajuda / Chat</button>
+<section id="forja-support-panel" role="dialog" aria-label="Chat de suporte da Forja AI">
+  <header style="display:flex;align-items:center;gap:10px;padding:14px;background:#fff;border-bottom:1px solid #eee3dc">
+    <div style="width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:#c93f12;color:white;font-size:19px">✦</div>
+    <div style="flex:1"><strong style="display:block;font-size:15px">Suporte Forja AI</strong><span style="font-size:12px;color:#7e6b6c">Erros, geração e prévia</span></div>
+    <button id="forja-support-close" type="button" aria-label="Fechar chat" style="border:0;background:transparent;font-size:23px;cursor:pointer;color:#5d4b4e">×</button>
+  </header>
+  <div id="forja-support-messages" aria-live="polite"><div class="forja-support-bubble forja-support-assistant">Olá! Posso ajudar a diagnosticar erros da Forja AI. Conte o que aconteceu — por exemplo, se a geração fica carregando ou se a prévia abre grande demais.</div></div>
+  <div style="padding:10px;display:flex;gap:8px;border-top:1px solid #eee3dc;background:#fff">
+    <textarea id="forja-support-input" rows="2" maxlength="3000" placeholder="Descreva o erro..." aria-label="Sua mensagem"></textarea>
+    <button id="forja-support-send" type="button">Enviar</button>
+  </div>
+  <div style="padding:0 12px 10px;background:#fff;color:#8b7777;font-size:11px">Não envie senhas nem chaves secretas.</div>
+</section>
+<script>
+(function(){
+  const launcher=document.getElementById("forja-support-launcher");
+  const panel=document.getElementById("forja-support-panel");
+  const close=document.getElementById("forja-support-close");
+  const messagesEl=document.getElementById("forja-support-messages");
+  const input=document.getElementById("forja-support-input");
+  const send=document.getElementById("forja-support-send");
+  const history=[];
+  function toggle(open){panel.style.display=open?"flex":"none";launcher.setAttribute("aria-expanded",String(open));if(open)input.focus();}
+  launcher.addEventListener("click",()=>toggle(panel.style.display!=="flex"));
+  close.addEventListener("click",()=>toggle(false));
+  function bubble(text,role){const el=document.createElement("div");el.className="forja-support-bubble "+(role==="user"?"forja-support-user":"forja-support-assistant");el.textContent=text;messagesEl.appendChild(el);messagesEl.scrollTop=messagesEl.scrollHeight;return el;}
+  async function submit(){
+    const text=input.value.trim();if(!text||send.disabled)return;
+    if(!window.forjaFirebase||!window.forjaFirebase.currentUser){bubble("Entre na sua conta para usar o chat de suporte.","assistant");return;}
+    input.value="";history.push({role:"user",content:text});bubble(text,"user");send.disabled=true;send.textContent="…";
+    const waiting=bubble("Analisando sua mensagem…","assistant");
+    try{
+      const token=await window.forjaFirebase.currentUser.getIdToken();
+      const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({messages:history.slice(-12)})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||"Não foi possível obter uma resposta.");
+      waiting.textContent=data.answer||"A IA não retornou uma resposta.";
+      history.push({role:"assistant",content:waiting.textContent});
+    }catch(error){waiting.textContent=(error&&error.message)||"Falha ao enviar. Atualize a página e tente novamente.";history.pop();}
+    finally{send.disabled=false;send.textContent="Enviar";input.focus();messagesEl.scrollTop=messagesEl.scrollHeight;}
+  }
+  send.addEventListener("click",submit);
+  input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();submit();}});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")toggle(false);});
+})();
+</script>
+
 </body>
 </html>
