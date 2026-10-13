@@ -471,14 +471,16 @@ html svg[fill="#FFFFFF"]{filter:none}
   window.__forjaGeminiIntegrationInstalled = true;
 
   var generatedCode = "";
+  var projectPrompt = "";
   var activeTab = "preview";
   var drawer;
+  var frameRenderTimer = null;
 
   function button(label, secondary) {
     var b = document.createElement("button");
     b.type = "button";
     b.textContent = label;
-    b.style.cssText = "border:1px solid " + (secondary ? "#E8DCD6" : "#C93F12") + ";border-radius:10px;padding:10px 13px;background:" + (secondary ? "#fff" : "#C93F12") + ";color:" + (secondary ? "#30252B" : "#fff") + ";font:600 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap";
+    b.style.cssText = "border:1px solid " + (secondary ? "#363741" : "#C82432") + ";border-radius:10px;padding:10px 13px;background:" + (secondary ? "#1d1e24" : "linear-gradient(135deg,#d93643,#a7192b)") + ";color:#f6f6f8;font:600 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap;transition:transform .15s,border-color .15s,background .15s";
     return b;
   }
 
@@ -489,16 +491,16 @@ html svg[fill="#FFFFFF"]{filter:none}
     var panel = document.createElement("aside");
     panel.id = "forja-preview-drawer";
     panel.setAttribute("aria-label", "Prévia do aplicativo");
-    panel.style.cssText = "position:absolute;top:0;right:0;width:min(1440px,98vw);max-width:100vw;height:100%;height:100dvh;max-height:100dvh;background:#FAF9F5;color:#20191D;box-shadow:-16px 0 50px rgba(0,0,0,.18);display:flex;flex-direction:column;min-height:0;transform:translateX(100%);transition:transform .22s ease;font:14px/1.45 system-ui,sans-serif;overflow:hidden";
+    panel.style.cssText = "position:absolute;top:0;right:0;width:min(1540px,99vw);max-width:100vw;height:100%;height:100dvh;max-height:100dvh;background:#101115;color:#f3f3f6;box-shadow:-24px 0 80px rgba(0,0,0,.42);display:flex;flex-direction:column;min-height:0;transform:translateX(100%);transition:transform .22s ease;font:14px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;overflow:hidden";
     var header = document.createElement("header");
-    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:#fff;border-bottom:1px solid #E9DFD8";
+    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 18px;background:#15161b;border-bottom:1px solid #2b2c33;flex-shrink:0";
     var titleWrap = document.createElement("div");
     var title = document.createElement("div");
-    title.textContent = "Seu aplicativo";
-    title.style.cssText = "font-size:18px;font-weight:800;letter-spacing:-.02em";
+    title.textContent = "Forja AI";
+    title.style.cssText = "font-size:17px;font-weight:800;letter-spacing:-.035em;color:#fbf9fa";
     var subtitle = document.createElement("div");
-    subtitle.textContent = "Prévia gerada pela Forja AI";
-    subtitle.style.cssText = "font-size:12px;color:#77676E;margin-top:3px";
+    subtitle.textContent = "Editor de aplicativos · projeto atual";
+    subtitle.style.cssText = "font-size:11px;color:#a3a4af;margin-top:3px";
     titleWrap.append(title, subtitle);
     var close = button("Fechar", true);
     close.setAttribute("aria-label", "Fechar prévia");
@@ -506,7 +508,7 @@ html svg[fill="#FFFFFF"]{filter:none}
     header.append(titleWrap, close);
 
     var toolbar = document.createElement("div");
-    toolbar.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#fff;border-bottom:1px solid #E9DFD8;flex-shrink:0;max-width:100%;box-sizing:border-box";
+    toolbar.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;background:#15161b;border-bottom:1px solid #2b2c33;flex-shrink:0;max-width:100%;box-sizing:border-box";
     var previewTab = button("Prévia", false);
     var codeTab = button("Código HTML", true);
     var copy = button("Copiar código", true);
@@ -549,7 +551,7 @@ html svg[fill="#FFFFFF"]{filter:none}
 
     var status = document.createElement("div");
     status.id = "forja-preview-status";
-    status.style.cssText = "flex:1;min-height:260px;margin:16px;display:flex;align-items:center;justify-content:center;padding:28px;background:linear-gradient(145deg,#ffffff 0%,#fff8f4 100%);border:1px solid #eee2da;border-radius:18px;color:#30252b;box-shadow:0 12px 32px rgba(48,37,43,.06);text-align:center;overflow:auto";
+    status.style.cssText = "flex:1;min-height:260px;margin:14px;display:flex;align-items:center;justify-content:center;padding:28px;background:radial-gradient(ellipse at 50% 0%,#22232b 0%,#15161b 56%,#111216 100%);border:1px solid #30313a;border-radius:16px;color:#f4f3f6;box-shadow:0 12px 32px rgba(0,0,0,.18);text-align:center;overflow:auto";
     var loaderWrap = document.createElement("div");
     loaderWrap.style.cssText = "width:min(100%,420px);display:flex;flex-direction:column;align-items:center;gap:16px";
     var mark = document.createElement("div");
@@ -557,23 +559,50 @@ html svg[fill="#FFFFFF"]{filter:none}
     mark.innerHTML = '<svg viewBox="0 0 64 64" width="34" height="34" aria-hidden="true"><path d="M34 5 13 34h15l-3 25 26-34H35z" fill="#fff"/><path d="m34 5-6 29h13l-6 25 26-34H43z" fill="#ffd7ca" opacity=".82"/></svg>';
     var loaderTitle = document.createElement("div");
     loaderTitle.textContent = "A Forja está trabalhando";
-    loaderTitle.style.cssText = "font-size:20px;font-weight:750;letter-spacing:-.04em";
+    loaderTitle.style.cssText = "font-size:20px;font-weight:750;letter-spacing:-.04em;color:#f8f7fa";
     var loaderMessage = document.createElement("div");
     loaderMessage.id = "forja-preview-status-message";
     loaderMessage.textContent = "Descreva seu aplicativo e clique na seta para começar.";
-    loaderMessage.style.cssText = "font-size:13px;line-height:1.65;color:#786a6c;max-width:340px;overflow-wrap:anywhere";
+    loaderMessage.style.cssText = "font-size:13px;line-height:1.65;color:#b0b0bc;max-width:340px;overflow-wrap:anywhere";
     var progressTrack = document.createElement("div");
-    progressTrack.style.cssText = "height:5px;width:min(100%,260px);background:#f0e4df;border-radius:99px;overflow:hidden;margin-top:3px";
+    progressTrack.style.cssText = "height:5px;width:min(100%,260px);background:#30313a;border-radius:99px;overflow:hidden;margin-top:3px";
     var progressBar = document.createElement("div");
-    progressBar.style.cssText = "height:100%;width:38%;border-radius:99px;background:linear-gradient(90deg,#c93f12,#ff785e);animation:forja-progress 1.5s ease-in-out infinite alternate";
+    progressBar.style.cssText = "height:100%;width:38%;border-radius:99px;background:linear-gradient(90deg,#c82432,#ff626c);animation:forja-progress 1.5s ease-in-out infinite alternate";
     progressTrack.appendChild(progressBar);
     var loaderHint = document.createElement("div");
     loaderHint.textContent = "Preparando interface · componentes · interações";
-    loaderHint.style.cssText = "font-size:11px;letter-spacing:.02em;color:#9a8988";
+    loaderHint.style.cssText = "font-size:11px;letter-spacing:.02em;color:#858694";
     loaderWrap.append(mark,loaderTitle,loaderMessage,progressTrack,loaderHint);
     status.appendChild(loaderWrap);
     var loaderStyle = document.createElement("style");
-    loaderStyle.textContent = "@keyframes forja-progress{from{transform:translateX(-45%);width:38%}to{transform:translateX(165%);width:58%}}#forja-preview-workspace{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}#forja-preview-column{display:flex;flex:1 1 auto;flex-direction:column;min-width:0;min-height:0;overflow:hidden}#forja-build-chat{display:flex;flex:0 0 350px;width:350px;max-width:42%;flex-direction:column;min-height:0;border-right:1px solid #eee4df;background:#fff}#forja-build-chat-messages{flex:1;min-height:0;overflow:auto;padding:16px 14px;display:flex;flex-direction:column;gap:13px;background:linear-gradient(180deg,#fffdfc 0%,#faf7f5 100%);scroll-behavior:smooth}#forja-build-chat .forja-build-bubble{max-width:92%;padding:12px 14px;border-radius:15px;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 5px rgba(48,37,43,.035)}#forja-build-chat .assistant{background:#fff;border:1px solid #eee5e0;color:#45393b;align-self:flex-start;border-top-left-radius:5px}#forja-build-chat .user{background:linear-gradient(135deg,#d94b2c,#b9321e);color:#fff;align-self:flex-end;border:1px solid #c33d23;border-top-right-radius:5px;box-shadow:0 4px 12px rgba(201,63,18,.12)}#forja-build-chat-input{display:block;width:100%;resize:vertical;min-height:78px;max-height:150px;padding:12px 13px;border:1px solid #e8dcd5;border-radius:13px;background:#fff;color:#30252b;font:13px/1.5 system-ui,sans-serif;outline:none;box-shadow:0 2px 5px rgba(48,37,43,.025);transition:border-color .15s,box-shadow .15s}#forja-build-chat-input:focus{border-color:#d85a3b;box-shadow:0 0 0 3px rgba(201,63,18,.09)}#forja-build-chat-input::placeholder{color:#a08f8c}#forja-build-chat-send{border:0;border-radius:11px;background:linear-gradient(135deg,#d94b2c,#b9321e);color:#fff;font-weight:700;padding:10px 16px;cursor:pointer;box-shadow:0 4px 10px rgba(201,63,18,.16);transition:transform .15s,opacity .15s}#forja-build-chat-send:hover:not(:disabled){transform:translateY(-1px)}#forja-build-chat-send:disabled{opacity:.55;cursor:wait}#forja-build-chat-messages::-webkit-scrollbar{width:6px}#forja-build-chat-messages::-webkit-scrollbar-thumb{background:#e1d4ce;border-radius:99px}@media(max-width:760px){#forja-preview-drawer{width:100vw}#forja-preview-workspace{flex-direction:column-reverse}#forja-build-chat{flex:0 0 42%;width:100%;max-width:none;border-right:0;border-top:1px solid #E9DFD8}#forja-build-chat-messages{padding:8px}#forja-build-chat-input{min-height:46px}#forja-preview-status{margin:8px;padding:16px;min-height:140px}#forja-preview-drawer header{padding:10px}#forja-preview-drawer header div{max-width:58vw}#forja-preview-drawer header div div:first-child{font-size:16px}#forja-preview-drawer button{font-size:12px;padding:8px 9px}#forja-preview-drawer textarea{margin:8px;width:calc(100% - 16px)}}";
+    loaderStyle.textContent = `
+@keyframes forja-progress{from{transform:translateX(-45%);width:38%}to{transform:translateX(165%);width:58%}}
+#forja-preview-workspace{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden;background:#101115}
+#forja-preview-column{display:flex;flex:1 1 auto;flex-direction:column;min-width:0;min-height:0;overflow:hidden;background:#111216}
+#forja-build-chat{display:flex;flex:0 0 370px;width:370px;max-width:40%;flex-direction:column;min-height:0;border-right:1px solid #2b2c33;background:#15161b;color:#f2f2f6}
+#forja-build-chat-messages{flex:1;min-height:0;overflow:auto;padding:18px 15px;display:flex;flex-direction:column;gap:14px;background:linear-gradient(180deg,#15161b 0%,#121317 100%);scroll-behavior:smooth}
+#forja-build-chat .forja-build-bubble{max-width:96%;padding:12px 14px;border-radius:14px;font-size:13px;line-height:1.68;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 8px rgba(0,0,0,.10)}
+#forja-build-chat .assistant{background:#202128;border:1px solid #30313a;color:#e7e6ed;align-self:flex-start;border-top-left-radius:5px}
+#forja-build-chat .user{background:linear-gradient(135deg,#c92c3b,#921c2a);color:#fff;align-self:flex-end;border:1px solid #d23b48;border-top-right-radius:5px;box-shadow:0 5px 15px rgba(181,31,49,.18)}
+#forja-build-chat-input{display:block;width:100%;resize:vertical;min-height:78px;max-height:150px;padding:12px 13px;border:1px solid #3b3c46;border-radius:13px;background:#1d1e24;color:#f5f4f7;font:13px/1.55 Inter,ui-sans-serif,system-ui,sans-serif;outline:none;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:border-color .15s,box-shadow .15s}
+#forja-build-chat-input:focus{border-color:#d34250;box-shadow:0 0 0 3px rgba(200,36,50,.15)}
+#forja-build-chat-input::placeholder{color:#858694}
+#forja-build-chat-send{border:1px solid #d94350;border-radius:12px;background:linear-gradient(135deg,#d73545,#a71d2d);color:#fff;font-size:22px;line-height:1;font-weight:600;width:42px;height:42px;display:grid;place-items:center;cursor:pointer;box-shadow:0 5px 15px rgba(176,31,47,.2);transition:transform .15s,opacity .15s}
+#forja-build-chat-send:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.08)}
+#forja-build-chat-send:disabled{opacity:.45;cursor:wait}
+#forja-build-chat-messages::-webkit-scrollbar{width:6px}
+#forja-build-chat-messages::-webkit-scrollbar-thumb{background:#383943;border-radius:99px}
+.forja-quick-actions{display:flex;gap:6px;flex-wrap:wrap;padding:0 13px 12px;background:#15161b}
+.forja-quick-action{border:1px solid #353640;border-radius:999px;padding:7px 9px;background:#1d1e24;color:#c9c8d2;font:11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;transition:border-color .15s,color .15s}
+.forja-quick-action:hover{border-color:#c43a48;color:#fff}
+#forja-build-chat .forja-chat-meta{font-size:10px;color:#888a98;line-height:1.5}
+#forja-preview-stage{background:#202127}
+#forja-preview-code{background:#101115!important;color:#e5e4ed!important;border-color:#34353d!important}
+#forja-preview-drawer button:focus-visible,#forja-build-chat-input:focus-visible{outline:2px solid #df4857;outline-offset:2px}
+@media(max-width:900px){#forja-build-chat{flex-basis:320px;width:320px;max-width:42%}}
+@media(max-width:760px){#forja-preview-drawer{width:100vw}#forja-preview-workspace{flex-direction:column-reverse}#forja-build-chat{flex:0 0 43%;width:100%;max-width:none;min-height:230px;border-right:0;border-top:1px solid #2b2c33}#forja-build-chat-messages{padding:10px;gap:9px}#forja-build-chat-input{min-height:46px;max-height:100px}#forja-preview-status{margin:8px;padding:16px;min-height:140px}#forja-preview-drawer header{padding:10px 12px}#forja-preview-drawer header div{max-width:58vw}#forja-preview-drawer header div div:first-child{font-size:16px}#forja-preview-drawer button{font-size:12px;padding:8px 9px}#forja-preview-drawer textarea{margin:8px;width:calc(100% - 16px)}.forja-quick-actions{padding:0 8px 8px;gap:5px}.forja-quick-action{font-size:10px;padding:6px 8px}}
+` `;
+
     document.head.appendChild(loaderStyle);
     var frame = document.createElement("iframe");
     frame.id = "forja-preview-frame";
@@ -599,17 +628,17 @@ html svg[fill="#FFFFFF"]{filter:none}
     chatColumn.id = "forja-build-chat";
     chatColumn.setAttribute("aria-label", "Chat durante a criação");
     var chatHeader = document.createElement("div");
-    chatHeader.style.cssText = "padding:15px 14px 13px;border-bottom:1px solid #eee5e0;background:linear-gradient(180deg,#fff 0%,#fffaf8 100%);flex-shrink:0";
-    chatHeader.innerHTML = '<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(145deg,#ef6747,#b72d1b);display:grid;place-items:center;color:#fff;font-size:18px;box-shadow:0 4px 10px rgba(201,63,18,.16)">✦</div><div style="min-width:0;flex:1"><strong style="display:block;font-size:14px;letter-spacing:-.02em;color:#30252B">Assistente da Forja</strong><span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7f706f;margin-top:4px"><span style="width:6px;height:6px;border-radius:50%;background:#32a46b;display:inline-block"></span>Contexto deste projeto</span></div></div>';
+    chatHeader.style.cssText = "padding:15px 15px 13px;border-bottom:1px solid #2b2c33;background:linear-gradient(180deg,#191a20 0%,#15161b 100%);flex-shrink:0";
+    chatHeader.innerHTML = '<div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:13px;background:linear-gradient(145deg,#dd3a49,#941c2a);display:grid;place-items:center;color:#fff;font-size:19px;box-shadow:0 5px 16px rgba(196,37,52,.22)">✦</div><div style="min-width:0;flex:1"><strong style="display:block;font-size:14px;letter-spacing:-.025em;color:#f7f6fa">Chat da Forja</strong><span style="display:block;font-size:11px;color:#9293a0;margin-top:4px">Crie, ajuste e corrija seu projeto por conversa</span></div><span style="font-size:10px;border:1px solid #393a45;border-radius:999px;padding:5px 7px;color:#c1c1cc;background:#202128">IA</span></div>';
     var chatMessages = document.createElement("div");
     chatMessages.id = "forja-build-chat-messages";
     chatMessages.setAttribute("aria-live", "polite");
     var initialBubble = document.createElement("div");
     initialBubble.className = "forja-build-bubble assistant";
-    initialBubble.textContent = "Olá! Sou seu assistente de criação. Posso ajudar a melhorar o visual, ajustar componentes, corrigir erros ou explicar o que está acontecendo na prévia. O que vamos aprimorar?";
+    initialBubble.textContent = "Vamos construir isso juntos. Peça mudanças em linguagem natural — posso revisar o layout, adicionar recursos e corrigir problemas. Depois de gerar o primeiro app, as mudanças são aplicadas ao código e à prévia."; 
     chatMessages.appendChild(initialBubble);
     var chatForm = document.createElement("div");
-    chatForm.style.cssText = "padding:12px;display:flex;flex-direction:column;gap:9px;border-top:1px solid #eee5e0;background:#fff;flex-shrink:0";
+    chatForm.style.cssText = "padding:12px 13px 14px;display:flex;flex-direction:column;gap:9px;border-top:1px solid #2b2c33;background:#15161b;flex-shrink:0";
     var chatInput = document.createElement("textarea");
     chatInput.id = "forja-build-chat-input";
     chatInput.rows = 3;
@@ -620,14 +649,26 @@ html svg[fill="#FFFFFF"]{filter:none}
     chatActions.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px";
     var chatHint = document.createElement("span");
     chatHint.textContent = "Enter para enviar · Shift+Enter para nova linha";
-    chatHint.style.cssText = "font-size:10px;color:#9a8988;line-height:1.4";
+    chatHint.style.cssText = "font-size:10px;color:#858694;line-height:1.45";
     var chatSend = document.createElement("button");
     chatSend.id = "forja-build-chat-send";
     chatSend.type = "button";
-    chatSend.textContent = "Enviar";
+    chatSend.textContent = "↑";
+    chatSend.setAttribute("aria-label", "Enviar mensagem");
+    chatSend.title = "Enviar mensagem";
     chatActions.append(chatHint, chatSend);
     chatForm.append(chatInput, chatActions);
-    chatColumn.append(chatHeader, chatMessages, chatForm);
+    var quickActions = document.createElement("div");
+    quickActions.className = "forja-quick-actions";
+    [["Melhorar o visual","Melhore o design para um padrão SaaS premium, mantendo os recursos atuais."],["Corrigir erros","Revise o código e corrija erros de HTML, CSS e JavaScript sem remover recursos."],["Adaptar para celular","Melhore a experiência mobile e corrija problemas de responsividade."]].forEach(function(item){
+      var quick = document.createElement("button");
+      quick.type = "button";
+      quick.className = "forja-quick-action";
+      quick.textContent = item[0];
+      quick.addEventListener("click", function(){ chatInput.value = item[1]; sendBuildChatMessage(); });
+      quickActions.appendChild(quick);
+    });
+    chatColumn.append(chatHeader, chatMessages, quickActions, chatForm);
     workspace.append(chatColumn, previewColumn);
     panel.append(header, toolbar, workspace);
 
@@ -649,29 +690,147 @@ html svg[fill="#FFFFFF"]{filter:none}
         return;
       }
       chatInput.value = "";
-      buildChatHistory.push({role:"user",content:message});
       addBuildChatBubble(message, "user");
-      var waitingBubble = addBuildChatBubble("Analisando sua mensagem…", "assistant");
+      var previousCode = generatedCode;
+      var waitingBubble = addBuildChatBubble(previousCode
+        ? "Entendi. Vou aplicar essa mudança ao código atual e abrir a nova prévia…"
+        : "Estou analisando sua mensagem…", "assistant");
       chatSend.disabled = true;
+      chatInput.disabled = true;
       chatSend.textContent = "…";
+      var controller = new AbortController();
+      var timeout = setTimeout(function(){ controller.abort(); }, 165000);
       try {
         var token = await currentUser.getIdToken();
-        var chatResponse = await fetch("/api/chat", {
+        if (!previousCode) {
+          var supportResponse = await fetch("/api/chat", {
+            method:"POST",
+            headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+            body:JSON.stringify({messages:[{role:"user",content:message}]}),
+            signal:controller.signal
+          });
+          var supportData = await supportResponse.json().catch(function(){return {};});
+          if (!supportResponse.ok) throw new Error(supportData.error || "Não foi possível obter uma resposta.");
+          waitingBubble.textContent = supportData.answer || "A IA não retornou uma resposta.";
+          return;
+        }
+
+        activeTab = "preview";
+        drawer.status.style.display = "flex";
+        drawer.status.style.color = "#f4f3f6";
+        drawer.statusMessage.textContent = "Preparando a alteração e reconstruindo a prévia…";
+        drawer.frame.style.display = "none";
+        drawer.previewStage.style.display = "none";
+        drawer.isRendering = true;
+
+        var editResponse = await fetch("/api/generate", {
           method:"POST",
-          headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
-          body:JSON.stringify({messages:buildChatHistory.slice(-12)})
+          headers:{"Content-Type":"application/json","Accept":"text/event-stream","Authorization":"Bearer "+token},
+          body:JSON.stringify({
+            mode:"modify",
+            projectPrompt:projectPrompt,
+            prompt:projectPrompt || message,
+            changeRequest:message,
+            currentCode:previousCode
+          }),
+          signal:controller.signal
         });
-        var chatData = await chatResponse.json().catch(function(){return {};});
-        if (!chatResponse.ok) throw new Error(chatData.error || "Não foi possível obter uma resposta.");
-        waitingBubble.textContent = chatData.answer || "A IA não retornou uma resposta.";
-        buildChatHistory.push({role:"assistant",content:waitingBubble.textContent});
+        var contentType = editResponse.headers.get("content-type") || "";
+        if (!editResponse.ok) {
+          var errorData = contentType.indexOf("application/json") !== -1
+            ? await editResponse.json().catch(function(){return {};})
+            : {error:await editResponse.text().catch(function(){return "";})};
+          throw new Error(errorData.error || "Não consegui aplicar a alteração.");
+        }
+        if (!editResponse.body || !editResponse.body.getReader || contentType.indexOf("text/event-stream") === -1) {
+          var plain = await editResponse.json().catch(function(){return {};});
+          if (!plain.code) throw new Error(plain.error || "A resposta da IA não trouxe o HTML atualizado.");
+          generatedCode = plain.code;
+        } else {
+          var reader = editResponse.body.getReader();
+          var decoder = new TextDecoder();
+          var buffer = "";
+          var streamedCode = "";
+          var updatedCode = "";
+          var gotError = "";
+          function parseBuildEvents(chunk) {
+            var blocks = chunk.split(/\r?\n\r?\n/);
+            for (var bi = 0; bi < blocks.length; bi++) {
+              var lines = blocks[bi].split(/\r?\n/);
+              for (var li = 0; li < lines.length; li++) {
+                if (lines[li].indexOf("data:") !== 0) continue;
+                var eventData;
+                try { eventData = JSON.parse(lines[li].slice(5).trim()); } catch(e) { continue; }
+                if (eventData.type === "chunk" && eventData.text) {
+                  streamedCode += eventData.text;
+                  drawer.statusMessage.textContent = "Aplicando alteração · " + streamedCode.length.toLocaleString("pt-BR") + " caracteres recebidos.";
+                } else if (eventData.type === "done") {
+                  updatedCode = eventData.code || streamedCode;
+                } else if (eventData.type === "error") {
+                  gotError = eventData.error || "A IA interrompeu a alteração.";
+                }
+              }
+            }
+          }
+          while (true) {
+            var part = await reader.read();
+            if (part.done) break;
+            buffer += decoder.decode(part.value, {stream:true});
+            var splitAt = buffer.split(/\r?\n\r?\n/);
+            if (splitAt.length > 1) {
+              var remaining = splitAt.pop() || "";
+              parseBuildEvents(splitAt.join("\n\n"));
+              buffer = remaining;
+            }
+            if (gotError) break;
+          }
+          buffer += decoder.decode();
+          if (buffer.trim()) parseBuildEvents(buffer);
+          if (gotError) throw new Error(gotError);
+          generatedCode = updatedCode || streamedCode;
+        }
+        if (!generatedCode || !/<html[\s>]/i.test(generatedCode) || !/<\/html\s*>/i.test(generatedCode)) {
+          generatedCode = previousCode;
+          throw new Error("A IA não concluiu o documento HTML. O aplicativo anterior foi preservado; divida a mudança em pedidos menores.");
+        }
+        drawer.codeArea.value = generatedCode;
+        drawer.statusMessage.textContent = "Alteração pronta. Abrindo a nova prévia…";
+        waitingBubble.textContent = "Alteração aplicada. Estou recarregando a prévia para mostrar o resultado.";
+        drawer.isRendering = true;
+        drawer.status.style.display = "flex";
+        drawer.frame.style.display = "none";
+        drawer.previewStage.style.display = "none";
+        drawer.frame.srcdoc = generatedCode;
+        if (frameRenderTimer) clearTimeout(frameRenderTimer);
+        frameRenderTimer = setTimeout(function(){
+          if (!drawer || !drawer.isRendering) return;
+          drawer.isRendering = false;
+          drawer.status.style.display = "flex";
+          drawer.statusMessage.textContent = "O código foi atualizado, mas a prévia demorou para carregar. Abra a aba Código HTML para conferir ou tente recarregar a prévia.";
+        }, 15000);
+        if (window.forjaFirebase && typeof window.forjaFirebase.saveProject === "function") {
+          window.forjaFirebase.saveProject({prompt:projectPrompt || message,code:generatedCode,title:(projectPrompt || message).slice(0,100)})
+            .catch(function(saveError){ console.warn("Não foi possível salvar esta versão do projeto.",saveError); });
+        }
+        chatMessages.scrollTop = chatMessages.scrollHeight;
       } catch(chatError) {
-        waitingBubble.textContent = (chatError && chatError.message) || "Falha ao enviar. Tente novamente.";
-        buildChatHistory.pop();
+        generatedCode = previousCode;
+        drawer.isRendering = false;
+        drawer.status.style.color = "#ffb5bd";
+        drawer.status.style.display = previousCode ? "none" : "flex";
+        if (previousCode) {
+          drawer.frame.style.display = "block";
+          drawer.previewStage.style.display = "flex";
+        }
+        var errText = chatError && chatError.name === "AbortError"
+          ? "A alteração demorou mais de 165 segundos. O código anterior foi preservado; tente uma mudança menor."
+          : ((chatError && chatError.message) || "Falha ao atualizar o aplicativo.");
+        waitingBubble.textContent = "Não consegui aplicar a alteração: " + errText;
       } finally {
+        clearTimeout(timeout);
         chatSend.disabled = false;
-        chatSend.textContent = "Enviar";
-        chatInput.focus();
+        chatInput.disabled = false;
+        chatSend.textContent = "↑";
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
     }
@@ -679,6 +838,7 @@ html svg[fill="#FFFFFF"]{filter:none}
     chatInput.addEventListener("keydown", function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendBuildChatMessage();}});
 
     frame.addEventListener("load", function(){
+      if (frameRenderTimer) { clearTimeout(frameRenderTimer); frameRenderTimer = null; }
       if (!drawer || drawer.frame !== frame || !drawer.isRendering) return;
       drawer.isRendering = false;
       showTab(activeTab);
@@ -760,6 +920,7 @@ html svg[fill="#FFFFFF"]{filter:none}
       return;
     }
 
+    projectPrompt = prompt;
     openDrawer();
     var d = drawer || createDrawer();
     generatedCode = "";
@@ -848,18 +1009,26 @@ html svg[fill="#FFFFFF"]{filter:none}
       d.statusMessage.textContent = "Código pronto. Renderizando a prévia interativa…";
       if (buildProgressBubble) buildProgressBubble.textContent = "A aplicação foi gerada. Estou abrindo a prévia interativa para você conferir o resultado.";
       d.codeArea.value = generatedCode;
-      if (window.forjaFirebase && typeof window.forjaFirebase.saveProject === "function") {
-        try {
-          await window.forjaFirebase.saveProject({prompt:prompt, code:generatedCode, title:prompt.slice(0, 100)});
-          console.info("Projeto salvo no Firebase Firestore.");
-        } catch (firebaseError) {
-          console.warn("A prévia foi gerada, mas não foi possível salvar no Firebase. Confira Authentication anônima e regras do Firestore.", firebaseError);
-        }
-      }
       d.isRendering = true;
       d.frame.style.display = "none";
       d.status.style.display = "flex";
+      d.previewStage.style.display = "none";
+      d.statusMessage.textContent = "Código pronto. Abrindo a prévia interativa…";
       d.frame.srcdoc = generatedCode;
+      if (frameRenderTimer) clearTimeout(frameRenderTimer);
+      frameRenderTimer = setTimeout(function(){
+        if (!drawer || drawer.frame !== d.frame || !drawer.isRendering) return;
+        drawer.isRendering = false;
+        drawer.status.style.display = "flex";
+        drawer.status.style.color = "#ffb5bd";
+        drawer.statusMessage.textContent = "O código foi gerado, mas a prévia não carregou no tempo esperado. Abra Código HTML para conferir o documento ou peça à IA para corrigir os erros.";
+        if (buildProgressBubble) buildProgressBubble.textContent = "O código foi gerado, mas a prévia não carregou. Peça para corrigir os erros ou confira a aba Código HTML.";
+      }, 15000);
+      if (window.forjaFirebase && typeof window.forjaFirebase.saveProject === "function") {
+        window.forjaFirebase.saveProject({prompt:prompt,code:generatedCode,title:prompt.slice(0,100)})
+          .then(function(){ console.info("Projeto salvo no Firebase Firestore."); })
+          .catch(function(firebaseError){ console.warn("A prévia foi gerada, mas não foi possível salvar no Firebase Firestore.",firebaseError); });
+      }
       // A aba já foi selecionada no início da geração. Evita ocultar o iframe
       // caso o evento load chegue antes desta continuação assíncrona.
     } catch (error) {
