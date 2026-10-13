@@ -608,7 +608,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     overlay.appendChild(panel);
     overlay.addEventListener("click", function(e){ if(e.target === overlay) closeDrawer(); });
     document.body.appendChild(overlay);
-    drawer = {overlay:overlay,panel:panel,status:status,frame:frame,previewStage:previewStage,codeArea:codeArea,previewTab:previewTab,codeTab:codeTab,desktopView:desktopView,mobileView:mobileView,previewSize:"desktop",isRendering:false,statusMessage:loaderMessage,chatMessages:chatMessages,chatInput:chatInput,chatSend:chatSend};
+    drawer = {overlay:overlay,panel:panel,status:status,frame:frame,previewStage:previewStage,codeArea:codeArea,previewTab:previewTab,codeTab:codeTab,desktopView:desktopView,mobileView:mobileView,previewSize:"desktop",isRendering:false,statusMessage:loaderMessage,chatMessages:chatMessages,chatInput:chatInput,chatSend:chatSend,addBuildChatBubble:addBuildChatBubble};
     setPreviewSize("desktop");
     return drawer;
   }
@@ -695,11 +695,18 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     var requestController = new AbortController();
     var requestTimeout = setTimeout(function(){ requestController.abort(); }, 70000);
+    var buildProgressBubble = null;
     try {
+      var buildUser = window.forjaFirebase && window.forjaFirebase.currentUser;
+      if (!buildUser) throw new Error("Sua sessão não foi localizada. Entre novamente na Forja AI antes de criar um aplicativo.");
+      var buildToken = await buildUser.getIdToken();
+      buildProgressBubble = typeof d.addBuildChatBubble === "function"
+        ? d.addBuildChatBubble("Estou analisando seu pedido e preparando a estrutura do aplicativo…", "assistant")
+        : null;
       d.statusMessage.textContent = "Conectando ao modelo de IA para gerar o aplicativo…";
       var response = await fetch("/api/generate", {
         method: "POST",
-        headers: {"Content-Type":"application/json","Accept":"text/event-stream"},
+        headers: {"Content-Type":"application/json","Accept":"text/event-stream","Authorization":"Bearer "+buildToken},
         body: JSON.stringify({prompt:prompt,stream:true}),
         signal: requestController.signal
       });
@@ -721,6 +728,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         var streamed = "";
         var finished = false;
         d.statusMessage.textContent = "A IA está escrevendo a interface e as interações…";
+        if (buildProgressBubble) buildProgressBubble.textContent = "Estou escrevendo o código do aplicativo e montando a interface. Você pode acompanhar o progresso aqui enquanto a prévia é preparada.";
         while (!finished) {
           var part = await reader.read();
           if (part.done) break;
@@ -737,6 +745,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 streamed += eventData.text;
                 d.codeArea.value = streamed;
                 d.statusMessage.textContent = "Gerando o aplicativo em tempo real · " + streamed.length.toLocaleString("pt-BR") + " caracteres de código recebidos.";
+                if (buildProgressBubble) {
+                  var progressPhase = streamed.length < 1200 ? "Estou definindo a estrutura e os estilos principais…" : streamed.length < 6000 ? "Estou construindo as seções, componentes e layout responsivo…" : "Estou finalizando os detalhes e as interações da aplicação…";
+                  buildProgressBubble.textContent = progressPhase + " Código recebido: " + streamed.length.toLocaleString("pt-BR") + " caracteres.";
+                }
                 d.codeArea.scrollTop = d.codeArea.scrollHeight;
               } else if (eventData.type === "done") {
                 generatedCode = eventData.code || streamed;
@@ -751,6 +763,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
       if (typeof generatedCode !== "string" || !generatedCode.trim()) throw new Error("A IA terminou sem retornar código HTML. Tente novamente.");
       d.statusMessage.textContent = "Código pronto. Renderizando a prévia interativa…";
+      if (buildProgressBubble) buildProgressBubble.textContent = "A aplicação foi gerada. Estou abrindo a prévia interativa para você conferir o resultado.";
       d.codeArea.value = generatedCode;
       if (window.forjaFirebase && typeof window.forjaFirebase.saveProject === "function") {
         try {
@@ -771,6 +784,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       d.status.style.color = "#ffd8d2";
       var errorMessage = error && error.name === "AbortError" ? "A geração passou de 70 segundos e foi interrompida. Verifique o provedor de IA em Integrações e tente novamente." : (error && error.message ? error.message : "Ocorreu um erro inesperado.");
       d.statusMessage.textContent = errorMessage + " Você pode tentar novamente clicando na seta para cima.";
+      if (buildProgressBubble) buildProgressBubble.textContent = "Não consegui concluir a criação: " + errorMessage + " Corrija a configuração indicada e tente novamente.";
       d.frame.style.display = "none";
     } finally {
       clearTimeout(requestTimeout);
