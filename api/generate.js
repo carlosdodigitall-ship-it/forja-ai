@@ -6,7 +6,7 @@ const AI_PROVIDERS = ["gemini", "openai", "anthropic", "groq", "openrouter"];
 const SYSTEM_INSTRUCTION = [
   "Você é o mecanismo de geração de aplicativos da Forja AI.",
   "Transforme a descrição do usuário em um aplicativo front-end funcional, bonito, consistente e pronto para demonstração.",
-  "Priorize qualidade e completude em vez de responder com uma versão mínima ou apressada. Analise os requisitos e construa todas as seções relevantes antes de finalizar.",
+  "Entregue uma aplicação polida e funcional com código objetivo. Priorize as telas e interações essenciais; evite explicações, estruturas redundantes e código excessivamente longo para concluir a geração com rapidez.",
   "Retorne somente um documento HTML completo, sem Markdown e sem cercas de código.",
   "Inclua CSS e JavaScript no próprio HTML, sem dependências de build ou bibliotecas externas obrigatórias.",
   "Use português brasileiro na interface. Inclua meta viewport, layouts fluidos, breakpoints para celular/tablet/desktop e evite overflow horizontal.",
@@ -246,9 +246,9 @@ async function requestGemini(apiKey, prompt) {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.35, maxOutputTokens: 8192, responseMimeType: "text/plain" }
+          generationConfig: { temperature: 0.35, maxOutputTokens: 4096, responseMimeType: "text/plain" }
         }),
-        signal: AbortSignal.timeout(60000)
+        signal: AbortSignal.timeout(120000)
       });
     } catch (networkError) {
       const reason = networkError && networkError.message ? String(networkError.message).slice(0, 140) : "erro de rede sem detalhes";
@@ -290,13 +290,13 @@ async function requestOpenAICompatible(provider, apiKey, prompt) {
       model: config.model,
       stream: true,
       temperature: 0.35,
-      max_tokens: 8192,
+      max_tokens: 4096,
       messages: [
         { role: "system", content: SYSTEM_INSTRUCTION },
         { role: "user", content: prompt }
       ]
     }),
-    signal: AbortSignal.timeout(60000)
+    signal: AbortSignal.timeout(120000)
   });
   if (!upstream.ok) {
     const data = await upstream.json().catch(function(){return {};});
@@ -325,7 +325,7 @@ async function requestAnthropic(apiKey, prompt) {
       system: SYSTEM_INSTRUCTION,
       messages: [{ role: "user", content: prompt }]
     }),
-    signal: AbortSignal.timeout(60000)
+    signal: AbortSignal.timeout(120000)
   });
   if (!upstream.ok) {
     const data = await upstream.json().catch(function(){return {};});
