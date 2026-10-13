@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
     const configuredGeminiModels = (process.env.FORJA_GEMINI_MODELS || "").split(",").map(function(v){return v.trim();}).filter(Boolean);
     if (selected.model) configuredGeminiModels.push(selected.model);
     const candidateModels = provider === "gemini"
-      ? Array.from(new Set(preferredGeminiModels.concat(configuredGeminiModels))).filter(function(value){return !/^gemini-2\\.5-flash$/i.test(value);})
+      ? Array.from(new Set(preferredGeminiModels.concat(configuredGeminiModels))).filter(function(value){return !/^gemini-2\.5-flash$/i.test(value);})
       : [model];
     for (const candidateModel of candidateModels) {
       let response;
