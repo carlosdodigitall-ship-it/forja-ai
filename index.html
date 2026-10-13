@@ -681,7 +681,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       d.isRendering = false;
       d.status.style.display = "flex";
       d.status.style.color = "#ffd8d2";
-      d.statusMessage.textContent = (error && error.message ? error.message : "Ocorreu um erro inesperado.") + " Você pode tentar novamente clicando na seta para cima.";
+      var errorMessage = error && error.name === "AbortError" ? "A geração passou de 70 segundos e foi interrompida. Verifique o provedor de IA em Integrações e tente novamente." : (error && error.message ? error.message : "Ocorreu um erro inesperado.");
+      d.statusMessage.textContent = errorMessage + " Você pode tentar novamente clicando na seta para cima.";
       d.frame.style.display = "none";
     } finally {
       clearTimeout(requestTimeout);
