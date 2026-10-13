@@ -157,16 +157,24 @@ function getBearer(req) {
 }
 
 async function resolveProvider(req, requested) {
-  const environmentKey = process.env.GEMINI_API_KEY;
+  const environmentKeys = {
+    gemini: process.env.GEMINI_API_KEY || "",
+    openai: process.env.OPENAI_API_KEY || ""
+  };
   const idToken = getBearer(req);
   const user = await verifyFirebaseIdToken(idToken);
   const hasSecureStorage = Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON && process.env.INTEGRATIONS_ENCRYPTION_KEY);
 
-  // The server-level Gemini key is a fallback for authenticated users only.
-  // Secret keys remain on the server; the frontend never receives them.
+  // Owner-managed server keys can be used by signed-in users without exposing secrets to the browser.
   if (!hasSecureStorage) {
-    if (requested === "auto" && environmentKey) {
-      return { provider: "gemini", credentials: { apiKey: environmentKey }, fromEnvironment: true };
+    if (requested !== "auto" && environmentKeys[requested]) {
+      return { provider: requested, credentials: { apiKey: environmentKeys[requested] }, fromEnvironment: true };
+    }
+    if (requested === "auto" && environmentKeys.gemini) {
+      return { provider: "gemini", credentials: { apiKey: environmentKeys.gemini }, fromEnvironment: true };
+    }
+    if (requested === "auto" && environmentKeys.openai) {
+      return { provider: "openai", credentials: { apiKey: environmentKeys.openai }, fromEnvironment: true };
     }
     throw new Error("SETUP_REQUIRED");
   }
@@ -175,8 +183,14 @@ async function resolveProvider(req, requested) {
   try {
     services = getAdmin();
   } catch (_) {
-    if (requested === "auto" && environmentKey) {
-      return { provider: "gemini", credentials: { apiKey: environmentKey }, fromEnvironment: true };
+    if (requested !== "auto" && environmentKeys[requested]) {
+      return { provider: requested, credentials: { apiKey: environmentKeys[requested] }, fromEnvironment: true };
+    }
+    if (requested === "auto" && environmentKeys.gemini) {
+      return { provider: "gemini", credentials: { apiKey: environmentKeys.gemini }, fromEnvironment: true };
+    }
+    if (requested === "auto" && environmentKeys.openai) {
+      return { provider: "openai", credentials: { apiKey: environmentKeys.openai }, fromEnvironment: true };
     }
     throw new Error("SETUP_REQUIRED");
   }
@@ -200,11 +214,15 @@ async function resolveProvider(req, requested) {
   }
 
   if (requested !== "auto") {
+    if (environmentKeys[requested]) {
+      return { provider: requested, credentials: { apiKey: environmentKeys[requested] }, fromEnvironment: true };
+    }
     const e = new Error("Essa IA ainda não está conectada. Abra Integrações, conecte e valide sua chave, depois tente novamente.");
     e.status = 400;
     throw e;
   }
-  if (environmentKey) return { provider: "gemini", credentials: { apiKey: environmentKey }, fromEnvironment: true };
+  if (environmentKeys.gemini) return { provider: "gemini", credentials: { apiKey: environmentKeys.gemini }, fromEnvironment: true };
+  if (environmentKeys.openai) return { provider: "openai", credentials: { apiKey: environmentKeys.openai }, fromEnvironment: true };
   const e = new Error("Nenhum provedor de IA conectado. Conecte Gemini, OpenAI, Anthropic, Groq ou OpenRouter em Integrações.");
   e.status = 400;
   throw e;
