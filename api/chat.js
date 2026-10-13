@@ -36,8 +36,14 @@ module.exports = async function handler(req, res) {
     const selected = await generator.resolveProvider(req, "auto");
     let lastError = "";
     const provider = selected.provider;
-    const model = selected.model || (provider === "gemini" ? (process.env.FORJA_GEMINI_MODEL || "gemini-2.5-flash") : provider === "anthropic" ? (process.env.FORJA_ANTHROPIC_MODEL || "claude-sonnet-4-6") : provider === "openai" ? (process.env.FORJA_OPENAI_MODEL || "gpt-4.1-mini") : provider === "groq" ? (process.env.FORJA_GROQ_MODEL || "llama-3.3-70b-versatile") : (process.env.FORJA_OPENROUTER_MODEL || "openai/gpt-4o-mini"));
-    for (const candidateModel of (provider === "gemini" ? (process.env.FORJA_GEMINI_MODELS || model).split(",").map(function(v){return v.trim();}).filter(Boolean) : [model])) {
+    const model = selected.model || (provider === "gemini" ? (process.env.FORJA_GEMINI_MODEL || "gemini-3.8-flash") : provider === "anthropic" ? (process.env.FORJA_ANTHROPIC_MODEL || "claude-sonnet-4-6") : provider === "openai" ? (process.env.FORJA_OPENAI_MODEL || "gpt-4.1-mini") : provider === "groq" ? (process.env.FORJA_GROQ_MODEL || "llama-3.3-70b-versatile") : (process.env.FORJA_OPENROUTER_MODEL || "openai/gpt-4o-mini"));
+    const preferredGeminiModels = ["gemini-3.8-flash","gemini-3.7-flash","gemini-3.6-flash","gemini-3.5-flash","gemini-3.5-flash-lite","gemini-3.1-flash-lite","gemini-3-flash-preview"];
+    const configuredGeminiModels = (process.env.FORJA_GEMINI_MODELS || "").split(",").map(function(v){return v.trim();}).filter(Boolean);
+    if (selected.model) configuredGeminiModels.push(selected.model);
+    const candidateModels = provider === "gemini"
+      ? Array.from(new Set(preferredGeminiModels.concat(configuredGeminiModels))).filter(function(value){return !/^gemini-2\\.5-flash$/i.test(value);})
+      : [model];
+    for (const candidateModel of candidateModels) {
       let response;
       try {
         response = await fetch(provider === "gemini" ? "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(candidateModel) + ":generateContent" : provider === "anthropic" ? "https://api.anthropic.com/v1/messages" : (provider === "groq" ? "https://api.groq.com/openai/v1/chat/completions" : provider === "openrouter" ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.openai.com/v1/chat/completions"), {
@@ -72,7 +78,8 @@ module.exports = async function handler(req, res) {
       }
       const data = await response.json().catch(function () { return {}; });
       lastError = data && data.error && data.error.message ? String(data.error.message).slice(0, 240) : "HTTP " + response.status;
-      if (![408, 429, 500, 502, 503, 504].includes(response.status)) break;
+      const unavailableModel = /model .*not found|not available to new users|no longer available to new users|is not supported|unknown model|model.*not available|unsupported model/i.test(lastError);
+      if (![408, 429, 500, 502, 503, 504].includes(response.status) && !unavailableModel) break;
     }
     return res.status(502).json({ error: "O chat não conseguiu responder: " + (lastError || "provedor indisponível") });
   } catch (error) {
