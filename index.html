@@ -1559,19 +1559,22 @@ document.addEventListener('DOMContentLoaded', async function() {
       var payload = await response.json();
       var data = payload.integrations || {};
       var list = [
-        {id:"gemini",name:"Google Gemini"},
-        {id:"openai",name:"OpenAI"},
+        {id:"gemini",name:"Google Gemini",model:"modelos Gemini"},
+        {id:"openai",name:"OpenAI — GPT-4.1 mini",model:"GPT-4.1 mini"},
         {id:"anthropic",name:"Anthropic Claude"},
         {id:"groq",name:"Groq"},
         {id:"openrouter",name:"OpenRouter"}
       ];
+      var available = Array.isArray(payload.availableProviders) ? payload.availableProviders : [];
       var saved = select.value || safeText(localStorage.getItem(selectionKey) || "auto");
       select.innerHTML = '<option value="auto">Automático — usar IA conectada</option>';
       list.forEach(function (p) {
-        if (!data[p.id]) return;
+        var isConnected = !!data[p.id];
+        var isAvailableOnServer = available.indexOf(p.id) !== -1;
+        if (!isConnected && !isAvailableOnServer) return;
         var opt = document.createElement("option");
         opt.value = p.id;
-        opt.textContent = p.name + " — conectado";
+        opt.textContent = p.name + (isConnected ? " — conectado" : " — disponível");
         select.appendChild(opt);
       });
       var valid = Array.prototype.some.call(select.options,function(o){return o.value===saved;});
