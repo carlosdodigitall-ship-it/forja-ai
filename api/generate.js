@@ -13,7 +13,12 @@ const SYSTEM_INSTRUCTION = [
   "Implemente as interações principais com JavaScript real; não crie botões decorativos sem comportamento. Verifique mentalmente a consistência dos seletores, eventos, navegação e estados antes de retornar o HTML.",
   "Quando o pedido for amplo, entregue uma interface substancial: hierarquia visual clara, estados vazios, mensagens de feedback, acessibilidade básica e conteúdo de exemplo coerente. Não invente uma integração real quando faltarem credenciais.",
   "Se o pedido envolver dados ou serviços externos não configurados, use dados de demonstração claramente identificados e não finja que existe uma integração real.",
-  "Não inclua segredos, chaves API ou credenciais no HTML gerado."
+  "Não inclua segredos, chaves API ou credenciais no HTML gerado.",
+  "Aplique um design system coeso, hierarquia tipográfica, espaçamento consistente, estados de foco, carregamento, vazio e erro quando fizer sentido.",
+  "Os botões, formulários, filtros, navegação, abas, busca e ações centrais devem funcionar de verdade; não deixe controles meramente decorativos.",
+  "Use APIs e dependências externas somente quando forem necessárias; prefira HTML, CSS e JavaScript nativos para aumentar a confiabilidade.",
+  "Antes de finalizar, confira se o HTML, CSS e JavaScript estão completos, se as tags script/style foram fechadas e se os seletores e eventos correspondem aos elementos existentes.",
+  "Se estiver modificando código existente, preserve tudo o que não foi explicitamente solicitado para mudar e retorne o documento completo atualizado, nunca apenas um trecho ou diff."
 ].join(" ");
 
 function jsonError(res, status, message) {
@@ -252,7 +257,7 @@ async function requestGemini(apiKey, prompt) {
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.35, maxOutputTokens: 4096, responseMimeType: "text/plain" }
+            generationConfig: { temperature: 0.25, maxOutputTokens: 8192, responseMimeType: "text/plain" }
           }),
           signal: AbortSignal.timeout(120000)
         });
@@ -312,7 +317,7 @@ async function requestOpenAICompatible(provider, apiKey, prompt) {
       model: config.model,
       stream: true,
       temperature: 0.35,
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages: [
         { role: "system", content: SYSTEM_INSTRUCTION },
         { role: "user", content: prompt }
@@ -404,11 +409,19 @@ async function forwardStream(res, upstream, provider, model) {
           const parts = chunk.candidates && chunk.candidates[0] && chunk.candidates[0].content && chunk.candidates[0].content.parts;
           text = Array.isArray(parts) ? parts.map(function(part){return part.text || "";}).join("") : "";
           const reason = chunk.candidates && chunk.candidates[0] && chunk.candidates[0].finishReason;
-          if (reason && reason !== "STOP" && reason !== "MAX_TOKENS") {
-            send({ type: "error", error: "O Gemini encerrou a geração: " + reason });
+          if (reason === "MAX_TOKENS") {
+            send({ type: "error", error: "O modelo atingiu o limite de saída e pode ter produzido HTML incompleto. Nenhuma atualização foi aplicada; tente uma solicitação menor." });
+            return res.end();
+          }
+          if (reason && reason !== "STOP") {
+            send({ type: "error", error: "O Gemini encerrou a geração: " + reason + ". Nenhuma atualização foi aplicada." });
             return res.end();
           }
         } else if (provider === "anthropic") {
+          if (chunk.type === "message_delta" && chunk.delta && chunk.delta.stop_reason === "max_tokens") {
+            send({ type:"error", error:"A resposta da IA atingiu o limite de saída e pode estar incompleta. Nenhuma atualização foi aplicada; tente dividir a alteração em etapas menores." });
+            return res.end();
+          }
           if (chunk.type === "content_block_delta" && chunk.delta && chunk.delta.type === "text_delta") text = chunk.delta.text || "";
           if (chunk.type === "error") {
             send({ type:"error", error:"A Anthropic interrompeu a geração. Verifique o limite e as permissões da chave." });
@@ -416,6 +429,10 @@ async function forwardStream(res, upstream, provider, model) {
           }
         } else {
           const choice = chunk.choices && chunk.choices[0];
+          if (choice && choice.finish_reason === "length") {
+            send({ type:"error", error:"A resposta da IA atingiu o limite de saída e pode estar incompleta. Nenhuma atualização foi aplicada; tente dividir a alteração em etapas menores." });
+            return res.end();
+          }
           if (choice && choice.delta) text = typeof choice.delta.content === "string" ? choice.delta.content : "";
           if (!text && choice && choice.delta && Array.isArray(choice.delta.content)) {
             text = choice.delta.content.map(function(part){return part.text || "";}).join("");
@@ -430,6 +447,10 @@ async function forwardStream(res, upstream, provider, model) {
     generated = normalizeHtml(generated);
     if (!generated) {
       send({ type:"error", error:"O provedor terminou sem retornar código HTML. Confira o modelo e tente novamente." });
+      return res.end();
+    }
+    if (!/<html[\\s>]/i.test(generated) || !/<\\/html\\s*>/i.test(generated)) {
+      send({ type:"error", error:"A IA encerrou a resposta antes de concluir o documento HTML. O código anterior foi preservado. Tente novamente com uma solicitação menor." });
       return res.end();
     }
     send({ type:"done", code:generated, model:model, provider:provider });
@@ -449,10 +470,30 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Método não permitido. Use POST." });
   }
 
-  const prompt = req.body && typeof req.body.prompt === "string" ? req.body.prompt.trim() : "";
-  const requested = String(req.body && req.body.provider || "auto");
-  if (!prompt) return jsonError(res, 400, "Descreva o aplicativo que deseja criar.");
-  if (prompt.length > 12000) return jsonError(res, 413, "A descrição é muito longa. Use até 12.000 caracteres.");
+  const body = req.body || {};
+  const mode = body.mode === "modify" ? "modify" : "create";
+  const requested = String(body.provider || "auto");
+  let prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+  if (mode === "modify") {
+    const currentCode = typeof body.currentCode === "string" ? body.currentCode : "";
+    const changeRequest = typeof body.changeRequest === "string" ? body.changeRequest.trim() : "";
+    const projectPrompt = typeof body.projectPrompt === "string" ? body.projectPrompt.trim().slice(0, 12000) : "";
+    if (!currentCode.trim()) return jsonError(res, 400, "Não encontrei o código atual para editar. Gere o aplicativo novamente.");
+    if (currentCode.length > 90000) return jsonError(res, 413, "Este projeto ultrapassa o limite de edição automática. Peça uma alteração menor ou reduza o código.");
+    if (!changeRequest) return jsonError(res, 400, "Descreva a alteração que deseja fazer.");
+    if (changeRequest.length > 3000) return jsonError(res, 413, "A alteração deve ter até 3.000 caracteres.");
+    prompt = [
+      "MODO DE EDIÇÃO DE UM PROJETO EXISTENTE. O código HTML abaixo é a fonte atual do projeto.",
+      "Pedido original do projeto: " + (projectPrompt || "Preserve o objetivo e o comportamento existente."),
+      "ALTERAÇÃO SOLICITADA AGORA: " + changeRequest,
+      "Retorne somente um documento HTML completo atualizado, do <!doctype html> até </html>. Não retorne Markdown, cercas de código, explicações, diffs, reticências ou seções omitidas. Preserve todos os recursos existentes que não conflitem com a alteração solicitada. Corrija erros diretamente relacionados à mudança e mantenha CSS e JavaScript válidos. Não invente integrações externas conectadas.",
+      "CÓDIGO HTML ATUAL COMPLETO:\n" + currentCode
+    ].join("\n\n");
+  } else {
+    if (!prompt) return jsonError(res, 400, "Descreva o aplicativo que deseja criar.");
+    if (prompt.length > 12000) return jsonError(res, 413, "A descrição é muito longa. Use até 12.000 caracteres.");
+  }
+  if (prompt.length > 110000) return jsonError(res, 413, "O contexto do projeto ficou muito grande para uma edição automática. Faça uma alteração menor.");
   if (requested !== "auto" && !AI_PROVIDERS.includes(requested)) return jsonError(res, 400, "Provedor de IA não suportado.");
 
   try {
