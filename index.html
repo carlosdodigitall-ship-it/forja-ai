@@ -938,7 +938,7 @@ html svg[fill="#FFFFFF"]{filter:none}
     trigger.setAttribute("aria-busy", "true");
 
     var requestController = new AbortController();
-    var requestTimeout = setTimeout(function(){ requestController.abort(); }, 130000);
+    var requestTimeout = setTimeout(function(){ requestController.abort(); }, 240000);
     var buildProgressBubble = null;
     try {
       var buildUser = window.forjaFirebase && window.forjaFirebase.currentUser;
@@ -1035,7 +1035,7 @@ html svg[fill="#FFFFFF"]{filter:none}
       d.isRendering = false;
       d.status.style.display = "flex";
       d.status.style.color = "#ffd8d2";
-      var errorMessage = error && error.name === "AbortError" ? "A geração ultrapassou 130 segundos e foi interrompida. Confira se o modelo escolhido está disponível e se sua conta de API tem créditos ou limite de uso." : (error && error.message ? error.message : "Ocorreu um erro inesperado.");
+      var errorMessage = error && error.name === "AbortError" ? "A geração ultrapassou 240 segundos e foi interrompida. O servidor limita as tentativas por modelo; verifique disponibilidade e limites da API." : (error && error.message ? error.message : "Ocorreu um erro inesperado.");
       d.statusMessage.textContent = errorMessage + " Você pode tentar novamente clicando na seta para cima.";
       if (buildProgressBubble) buildProgressBubble.textContent = "Não consegui concluir a criação: " + errorMessage + " Corrija a configuração indicada e tente novamente.";
       d.frame.style.display = "none";
