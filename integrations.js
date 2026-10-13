@@ -27,8 +27,27 @@ function render(){if(!main)return;const count=P.filter(p=>states[p.id]?.status==
 async function load(){notice='Consultando status real das integrações…';render();try{const d=await request('list');states=d.integrations||{};notice='Status atualizado.';}catch(e){states={};notice=e.message;}render();}
 function modal(p){const root=main.querySelector('#forja-integrations');const back=document.createElement('div');back.className='backdrop';back.innerHTML='<div class="modal" role="dialog" aria-modal="true"><div style="display:flex;gap:12px;align-items:center;margin-bottom:18px">'+logo(p)+'<div><h2>Conectar '+p.name+'</h2><div style="color:#a3a4ae;font-size:12px">'+p.desc+'</div></div></div><form id="fi-form">'+p.fields.map(f=>'<label class="field"><span>'+esc(f[1])+'</span><input required name="'+f[0]+'" type="'+f[3]+'" placeholder="'+esc(f[2])+'" autocomplete="off" spellcheck="false"><div class="help">'+esc(f[4])+'</div></label>').join('')+'<div id="fi-msg" class="msg"></div><div class="actions"><button type="button" id="fi-cancel">Cancelar</button><button class="primary" id="fi-submit" type="submit">Validar e conectar</button></div></form></div>';root.appendChild(back);const close=()=>back.remove();back.addEventListener('click',e=>{if(e.target===back)close();});back.querySelector('#fi-cancel').onclick=close;back.querySelector('form').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('#fi-submit'),msg=form.querySelector('#fi-msg'),credentials={};p.fields.forEach(f=>credentials[f[0]]=form.elements[f[0]].value.trim());btn.disabled=true;btn.textContent='Validando…';msg.textContent='';try{const d=await request('connect','POST',{provider:p.id,credentials});states[p.id]={status:'connected',accountLabel:d.accountLabel||p.name};notice=d.message||'Conexão validada.';close();render();}catch(err){msg.textContent=err.message;btn.disabled=false;btn.textContent='Tentar novamente';}};back.querySelector('input').focus();}
 async function disconnect(p){if(!confirm('Desconectar '+p.name+' desta conta?'))return;try{await request('disconnect','POST',{provider:p.id});delete states[p.id];notice=p.name+' desconectado.';}catch(e){notice=e.message;}render();}
-function open(link){appRoot=link&&link.getRootNode?link.getRootNode():document;main=(appRoot.querySelector&&appRoot.querySelector('main'))||(document.querySelector('main'));if(!main){notice='Não encontrei a área principal do painel. O menu está dentro de um componente isolado; não consegui localizar o conteúdo.';alert(notice);return;}if(homeHTML===null)homeHTML=main.innerHTML;const styleRoot=main.getRootNode();if(!(styleRoot.querySelector&&styleRoot.querySelector('#fi-style'))){const s=document.createElement('style');s.id='fi-style';s.textContent=css;(styleRoot.head||styleRoot).appendChild(s);}render();load();(styleRoot.querySelectorAll?styleRoot.querySelectorAll('nav a'):document.querySelectorAll('nav a')).forEach(a=>{const active=a.textContent.trim()==='Integrações';a.style.background=active?'#2a201f':'transparent';a.style.color=active?'#ff795e':'#b7b7c0';});}
-function home(){if(main&&homeHTML!==null){main.innerHTML=homeHTML;const root=main.getRootNode();(root.querySelectorAll?root.querySelectorAll('nav a'):document.querySelectorAll('nav a')).forEach(a=>{const active=a.textContent.trim()==='Início';a.style.background=active?'#2a201f':'transparent';a.style.color=active?'#ff795e':'#b7b7c0';});}}
+function open(link){
+  appRoot=document;
+  let host=document.getElementById('forja-integrations-host');
+  if(!host){
+    host=document.createElement('div');
+    host.id='forja-integrations-host';
+    host.style.cssText='position:fixed;inset:0;z-index:2147483000;overflow:auto;background:#101116;color:#fff;padding:16px;';
+    host.innerHTML='<div style="max-width:1500px;margin:0 auto 12px"><button type="button" id="fi-back" style="padding:10px 14px;background:#1d1e24;color:#fff;border:1px solid #393a44;border-radius:10px;cursor:pointer">← Voltar ao painel</button></div><main style="max-width:1500px;margin:0 auto"></main>';
+    document.body.appendChild(host);
+    host.querySelector('#fi-back').addEventListener('click',home);
+  }
+  main=host.querySelector('main');
+  if(!document.getElementById('fi-style')){const s=document.createElement('style');s.id='fi-style';s.textContent=css;document.head.appendChild(s);}
+  render();
+  load();
+}
+function home(){
+  const host=document.getElementById('forja-integrations-host');
+  if(host)host.remove();
+  main=null;
+}
 document.addEventListener('click',e=>{let a=null;const path=typeof e.composedPath==='function'?e.composedPath():[];for(const node of path){if(node&&node.tagName==='A'){a=node;break;}}if(!a&&e.target&&e.target.closest)a=e.target.closest('a');if(!a)return;const label=(a.textContent||'').replace(/\s+/g,' ').trim();if(label==='Integrações'){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();open(a);}else if(label==='Início'&&main&&homeHTML!==null){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();home();}},true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.querySelector('#forja-integrations .backdrop');if(m)m.remove();}});
 })();
