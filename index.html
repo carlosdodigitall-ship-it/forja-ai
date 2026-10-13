@@ -142,7 +142,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       // Dashboard content lives in a nested HTML document, so styles in the
       // outer shell cannot reach its inline-styled elements.
       if (typeof text === 'string' && typeof themeStyle === 'string' && /<head[^>]*>/i.test(text) && !text.includes('forja-constellation-theme')) {
-        text = text.replace(/<head[^>]*>/i, function (head) { return head + themeStyle; });
+        // Selectors in themeStyle target the outer shell's data-document-role.
+        // Inside this iframe that attribute does not exist, so scope those
+        // same dashboard rules to the iframe document's <html> element.
+        const embeddedTheme = themeStyle.replace(/\[data-document-role="page"\]/g, 'html');
+        text = text.replace(/<head[^>]*>/i, function (head) { return head + embeddedTheme; });
       }
       const pageBlob = new Blob([text], { type: 'text/html' });
       const u = URL.createObjectURL(pageBlob);
