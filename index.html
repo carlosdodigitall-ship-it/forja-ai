@@ -332,7 +332,27 @@ button{accent-color:#e34a62}
 #forja-build-chat-send{background:linear-gradient(135deg,#f15b78,#b6224c)!important;box-shadow:0 5px 18px rgba(227,50,91,.22)!important}
 #forja-preview-status{background:radial-gradient(ellipse at 50% 0,rgba(174,35,79,.18),transparent 58%),#170d17!important;border-color:#482235!important;color:#fff1f5!important}
 #forja-preview-code{background:#10090f!important;border-color:#482235!important;color:#ffeef4!important}
-@media(max-width:760px){#forja-auth-overlay{padding:14px!important}#forja-auth-overlay>main{padding:25px!important}}
+
+/* Forja AI — aplicação do tema à dashboard inteira */
+[data-document-role="page"]{background:#10090f!important;color:#fff1f5!important;min-height:100vh!important}
+[data-document-role="page"]>div{background:linear-gradient(145deg,#10090f,#160b15 55%,#1b0d19)!important;color:#fff1f5!important}
+[data-document-role="page"] aside{background:linear-gradient(180deg,#1a1019,#120a13)!important;border-color:#482235!important;color:#fff1f5!important}
+[data-document-role="page"] main,[data-document-role="page"] section,[data-document-role="page"] article{color:#fff1f5!important}
+[data-document-role="page"] header{background:rgba(26,16,25,.88)!important;border-color:#482235!important;color:#fff1f5!important}
+[data-document-role="page"] nav a{background:transparent!important;border:1px solid transparent!important;color:#d8bdca!important;transition:all .18s ease}
+[data-document-role="page"] nav a:hover,[data-document-role="page"] nav a[aria-current="page"]{background:linear-gradient(100deg,rgba(227,74,98,.22),rgba(168,32,69,.10))!important;border-color:#6d2c46!important;color:#fff1f5!important}
+[data-document-role="page"] button{background:#21121f!important;border:1px solid #563044!important;border-radius:12px!important;color:#fff1f5!important;box-shadow:0 5px 16px rgba(0,0,0,.12);transition:all .18s ease}
+[data-document-role="page"] button:hover{background:#382034!important;border-color:#e34a62!important;transform:translateY(-1px)}
+[data-document-role="page"] button[aria-pressed="true"],[data-document-role="page"] button[aria-selected="true"]{background:linear-gradient(135deg,#e34a62,#a82045)!important;border-color:#f05c78!important;color:#fff!important}
+[data-document-role="page"] a{color:#ff91aa!important}
+[data-document-role="page"] input,[data-document-role="page"] textarea,[data-document-role="page"] select{background:#10090f!important;border:1px solid #563044!important;border-radius:10px!important;color:#fff1f5!important}
+[data-document-role="page"] input:focus,[data-document-role="page"] textarea:focus,[data-document-role="page"] select:focus{outline:none!important;border-color:#e34a62!important;box-shadow:0 0 0 3px rgba(227,74,98,.15)!important}
+[data-document-role="page"] [style*="background: #FFFFFF"],[data-document-role="page"] [style*="background:#FFFFFF"],[data-document-role="page"] [style*="background: #FFF"],[data-document-role="page"] [style*="background:#FFF"],[data-document-role="page"] [style*="background: white"]{background:#1a1019!important;color:#fff1f5!important;border-color:#482235!important}
+[data-document-role="page"] [style*="background: #FBF7F4"],[data-document-role="page"] [style*="background:#FBF7F4"],[data-document-role="page"] [style*="background: #F4EDE8"],[data-document-role="page"] [style*="background:#F4EDE8"]{background:#140b14!important;color:#fff1f5!important;border-color:#482235!important}
+[data-document-role="page"] [style*="border: 1px solid #E9DFD8"],[data-document-role="page"] [style*="border:1px solid #E9DFD8"],[data-document-role="page"] [style*="border-bottom: 1px solid #E9DFD8"],[data-document-role="page"] [style*="border-right: 1px solid #E9DFD8"]{border-color:#482235!important}
+[data-document-role="page"] [style*="color: #1C1417"],[data-document-role="page"] [style*="color:#1C1417"],[data-document-role="page"] [style*="color: #20191D"],[data-document-role="page"] [style*="color:#20191D"],[data-document-role="page"] [style*="color: #6B5D63"],[data-document-role="page"] [style*="color:#6B5D63"]{color:#fff1f5!important}
+[data-document-role="page"] svg[fill="#FFFFFF"]{filter:drop-shadow(0 0 7px rgba(227,74,98,.22))}
+@media(max-width:760px){[data-document-role="page"]>div{flex-direction:column!important}[data-document-role="page"] aside{flex:0 0 auto!important;width:100%!important;border-right:0!important;border-bottom:1px solid #482235!important}#forja-auth-overlay{padding:14px!important}#forja-auth-overlay>main{padding:25px!important}}
 </style>`;
 
     // Inject after <head> so the DOCTYPE stays first; prepending the script
