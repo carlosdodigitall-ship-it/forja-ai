@@ -33,19 +33,26 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const selected = await generator.resolveProvider(req, "gemini");
-    const models = (process.env.FORJA_GEMINI_MODELS || "gemini-3.8-flash,gemini-3.6-flash").split(",").map(function (v) { return v.trim(); }).filter(Boolean);
+    const selected = await generator.resolveProvider(req, "auto");
     let lastError = "";
-    for (const model of models) {
+    const provider = selected.provider;
+    const model = selected.model || (provider === "gemini" ? (process.env.FORJA_GEMINI_MODEL || "gemini-2.5-flash") : provider === "anthropic" ? (process.env.FORJA_ANTHROPIC_MODEL || "claude-sonnet-4-6") : provider === "openai" ? (process.env.FORJA_OPENAI_MODEL || "gpt-4.1-mini") : provider === "groq" ? (process.env.FORJA_GROQ_MODEL || "llama-3.3-70b-versatile") : (process.env.FORJA_OPENROUTER_MODEL || "openai/gpt-4o-mini"));
+    for (const candidateModel of (provider === "gemini" ? (process.env.FORJA_GEMINI_MODELS || model).split(",").map(function(v){return v.trim();}).filter(Boolean) : [model])) {
       let response;
       try {
-        response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+        response = await fetch(provider === "gemini" ? "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(candidateModel) + ":generateContent" : provider === "anthropic" ? "https://api.anthropic.com/v1/messages" : (provider === "groq" ? "https://api.groq.com/openai/v1/chat/completions" : provider === "openrouter" ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.openai.com/v1/chat/completions"), {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": selected.credentials.apiKey },
-          body: JSON.stringify({
+          headers: { "Content-Type": "application/json", ...(provider === "gemini" ? {"x-goog-api-key": selected.credentials.apiKey} : provider === "anthropic" ? {"x-api-key": selected.credentials.apiKey, "anthropic-version":"2023-06-01"} : {"Authorization":"Bearer " + selected.credentials.apiKey}) },
+          body: JSON.stringify(provider === "gemini" ? {
             systemInstruction: { parts: [{ text: SUPPORT_INSTRUCTION }] },
             contents: safeMessages,
             generationConfig: { temperature: 0.4, maxOutputTokens: 1200 }
+          } : provider === "anthropic" ? {
+            model: candidateModel, max_tokens: 1200, temperature: 0.4, system: SUPPORT_INSTRUCTION,
+            messages: safeMessages.map(function(m){return {role:m.role === "model" ? "assistant" : "user", content:m.parts.map(function(p){return p.text;}).join("\\n")};})
+          } : {
+            model: candidateModel, temperature: 0.4, max_tokens: 1200,
+            messages: [{role:"system",content:SUPPORT_INSTRUCTION}].concat(safeMessages.map(function(m){return {role:m.role === "model" ? "assistant" : "user",content:m.parts.map(function(p){return p.text;}).join("\\n")};}))
           }),
           signal: AbortSignal.timeout(25000)
         });
@@ -55,11 +62,13 @@ module.exports = async function handler(req, res) {
       }
       if (response.ok) {
         const data = await response.json();
-        const answer = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts
-          ? data.candidates[0].content.parts.map(function (part) { return part.text || ""; }).join("").trim()
-          : "";
+        const answer = provider === "gemini"
+          ? (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts ? data.candidates[0].content.parts.map(function(part){return part.text || "";}).join("").trim() : "")
+          : provider === "anthropic"
+          ? (data && Array.isArray(data.content) ? data.content.map(function(part){return part.text || "";}).join("").trim() : "")
+          : (data && data.choices && data.choices[0] && data.choices[0].message ? String(data.choices[0].message.content || "").trim() : "");
         if (!answer) return res.status(502).json({ error: "A IA não retornou uma resposta. Tente enviar a mensagem novamente." });
-        return res.status(200).json({ answer: answer, model: model });
+        return res.status(200).json({ answer: answer, model: candidateModel, provider: provider });
       }
       const data = await response.json().catch(function () { return {}; });
       lastError = data && data.error && data.error.message ? String(data.error.message).slice(0, 240) : "HTTP " + response.status;
