@@ -235,7 +235,7 @@ async function requestGemini(apiKey, prompt) {
   // faça a aplicação tentar primeiro um modelo 2.5 indisponível para novas contas.
   const configuredModels = (process.env.FORJA_GEMINI_MODELS || "")
     .split(",").map(function(v){return v.trim();}).filter(Boolean);
-  const preferredModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+  const preferredModels = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3-flash-preview"];
   const models = Array.from(new Set(preferredModels.concat(configuredModels).filter(function(model){
     return !/^gemini-2\.5-flash$/i.test(model);
   })));
@@ -243,38 +243,52 @@ async function requestGemini(apiKey, prompt) {
   let detail = "";
   const failures = [];
   for (const candidate of models) {
-    try {
-      upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(candidate) + ":streamGenerateContent?alt=sse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.35, maxOutputTokens: 4096, responseMimeType: "text/plain" }
-        }),
-        signal: AbortSignal.timeout(120000)
-      });
-    } catch (networkError) {
-      const reason = networkError && networkError.message ? String(networkError.message).slice(0, 140) : "erro de rede sem detalhes";
-      detail = "Falha de conexão com " + candidate + ": " + reason;
-      failures.push(detail);
-      continue;
-    }
-    if (upstream.ok) return { upstream: upstream, provider: "gemini", model: candidate };
-    const data = await upstream.json().catch(function(){return {};});
-    detail = data && data.error && data.error.message ? String(data.error.message).slice(0,300) : "HTTP " + upstream.status;
-    failures.push(candidate + ": " + detail);
-    // Se um modelo não estiver habilitado para esta chave, tente o próximo modelo.
-    // Erros de autenticação/permissão são devolvidos imediatamente; erros de modelo
-    // (por exemplo, 400/404 informando que não está disponível) permitem fallback.
-    const modelUnavailable = /model .*not found|not available to new users|no longer available to new users|is not supported|unknown model|model.*not available|unsupported model/i.test(detail);
-    if (![408,429,500,502,503,504].includes(upstream.status) && !modelUnavailable) {
-      const e = new Error("O Google Gemini recusou a solicitação. " + detail);
-      e.status = upstream.status === 401 || upstream.status === 403 ? 502 : upstream.status;
-      throw e;
+    // Sobrecarga temporária é comum; repita a chamada antes de trocar de modelo.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(candidate) + ":streamGenerateContent?alt=sse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.35, maxOutputTokens: 4096, responseMimeType: "text/plain" }
+          }),
+          signal: AbortSignal.timeout(120000)
+        });
+      } catch (networkError) {
+        const reason = networkError && networkError.message ? String(networkError.message).slice(0, 140) : "erro de rede sem detalhes";
+        detail = "Falha de conexão com " + candidate + ": " + reason;
+        failures.push(detail);
+        if (attempt < 2) {
+          await new Promise(function(resolve){ setTimeout(resolve, 700 * (attempt + 1)); });
+          continue;
+        }
+        break;
+      }
+      if (upstream.ok) return { upstream: upstream, provider: "gemini", model: candidate };
+      const data = await upstream.json().catch(function(){return {};});
+      detail = data && data.error && data.error.message ? String(data.error.message).slice(0,300) : "HTTP " + upstream.status;
+      failures.push(candidate + " (HTTP " + upstream.status + "): " + detail);
+      const modelUnavailable = /model .*not found|not available to new users|no longer available to new users|is not supported|unknown model|model.*not available|unsupported model/i.test(detail);
+      const temporaryOverload = upstream.status === 429 || upstream.status === 503 ||
+        /high demand|overloaded|temporarily unavailable|try again later|resource exhausted/i.test(detail);
+      if (temporaryOverload && attempt < 2) {
+        await new Promise(function(resolve){ setTimeout(resolve, 900 * (attempt + 1)); });
+        continue;
+      }
+      if (![408,429,500,502,503,504].includes(upstream.status) && !modelUnavailable) {
+        const e = new Error("O Google Gemini recusou a solicitação. " + detail);
+        e.status = upstream.status === 401 || upstream.status === 403 ? 502 : upstream.status;
+        throw e;
+      }
+      break;
     }
   }
-  const e = new Error("Nenhum modelo Gemini respondeu. " + (failures.slice(-3).join(" | ") || detail));
+  const overloaded = failures.some(function(value){ return /high demand|overloaded|temporarily unavailable|try again later|resource exhausted|HTTP 429|HTTP 503/i.test(value); });
+  const e = new Error(overloaded
+    ? "Os modelos Gemini estão temporariamente sobrecarregados, mesmo após novas tentativas. Aguarde alguns minutos e tente novamente. Detalhes: " + failures.slice(-4).join(" | ")
+    : "Nenhum modelo Gemini respondeu. " + (failures.slice(-4).join(" | ") || detail));
   e.status = 503;
   throw e;
 }
