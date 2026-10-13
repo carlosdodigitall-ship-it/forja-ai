@@ -580,7 +580,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         var chatResponse = await fetch("/api/chat", {
           method:"POST",
           headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
-          body:JSON.stringify({messages:buildChatHistory.slice(-12).concat([{role:"assistant",content:"Contexto: o usuário está criando um aplicativo na Forja AI. A geração e a prévia aparecem nesta mesma janela dividida."}]).slice(-12)})
+          body:JSON.stringify({messages:buildChatHistory.slice(-12)})
         });
         var chatData = await chatResponse.json().catch(function(){return {};});
         if (!chatResponse.ok) throw new Error(chatData.error || "Não foi possível obter uma resposta.");
