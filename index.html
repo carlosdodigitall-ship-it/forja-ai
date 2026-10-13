@@ -379,7 +379,11 @@ button{accent-color:#e34a62}
     const headOpen = template.match(/<head[^>]*>/i);
     if (headOpen) {
       const i = headOpen.index + headOpen[0].length;
-      template = template.slice(0, i) + resourceScript + themeStyle + template.slice(i);
+      // The actual rendered dashboard is the root document after replacement.
+      // It does not carry data-document-role="page", so those scoped selectors
+      // never matched. Scope the dashboard rules to the real document instead.
+      const activeThemeStyle = themeStyle.replace(/\[data-document-role="page"\]/g, 'html');
+      template = template.slice(0, i) + resourceScript + activeThemeStyle + template.slice(i);
     }
 
     // Parse the template and swap the root element. Scripts inserted via
