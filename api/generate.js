@@ -420,3 +420,7 @@ module.exports = async function handler(req, res) {
     return jsonError(res, Number(error && error.status) || 500, error.message || "Falha ao preparar a geração.");
   }
 };
+
+
+// Reutilizado pelo endpoint de suporte para manter a mesma autenticação e seleção segura de credenciais.
+module.exports.resolveProvider = resolveProvider;
