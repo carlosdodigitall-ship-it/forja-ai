@@ -470,7 +470,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     var status = document.createElement("div");
     status.id = "forja-preview-status";
-    status.style.cssText = "flex:1;min-height:260px;margin:16px;display:flex;align-items:center;justify-content:center;padding:28px;background:radial-gradient(ellipse at 50% 38%,#2b1719 0%,#171416 48%,#111012 100%);border:1px solid #3a272a;border-radius:16px;color:#f8f3f4;box-shadow:0 16px 40px rgba(18,12,14,.12);text-align:center;overflow:auto";
+    status.style.cssText = "flex:1;min-height:260px;margin:16px;display:flex;align-items:center;justify-content:center;padding:28px;background:linear-gradient(145deg,#ffffff 0%,#fff8f4 100%);border:1px solid #eee2da;border-radius:18px;color:#30252b;box-shadow:0 12px 32px rgba(48,37,43,.06);text-align:center;overflow:auto";
     var loaderWrap = document.createElement("div");
     loaderWrap.style.cssText = "width:min(100%,420px);display:flex;flex-direction:column;align-items:center;gap:16px";
     var mark = document.createElement("div");
@@ -482,19 +482,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     var loaderMessage = document.createElement("div");
     loaderMessage.id = "forja-preview-status-message";
     loaderMessage.textContent = "Descreva seu aplicativo e clique na seta para começar.";
-    loaderMessage.style.cssText = "font-size:13px;line-height:1.6;color:#b9a9ad;max-width:340px;overflow-wrap:anywhere";
+    loaderMessage.style.cssText = "font-size:13px;line-height:1.65;color:#786a6c;max-width:340px;overflow-wrap:anywhere";
     var progressTrack = document.createElement("div");
-    progressTrack.style.cssText = "height:4px;width:min(100%,260px);background:#3a292d;border-radius:99px;overflow:hidden;margin-top:3px";
+    progressTrack.style.cssText = "height:5px;width:min(100%,260px);background:#f0e4df;border-radius:99px;overflow:hidden;margin-top:3px";
     var progressBar = document.createElement("div");
     progressBar.style.cssText = "height:100%;width:38%;border-radius:99px;background:linear-gradient(90deg,#c93f12,#ff785e);animation:forja-progress 1.5s ease-in-out infinite alternate";
     progressTrack.appendChild(progressBar);
     var loaderHint = document.createElement("div");
     loaderHint.textContent = "Preparando interface · componentes · interações";
-    loaderHint.style.cssText = "font-size:11px;letter-spacing:.02em;color:#806d72";
+    loaderHint.style.cssText = "font-size:11px;letter-spacing:.02em;color:#9a8988";
     loaderWrap.append(mark,loaderTitle,loaderMessage,progressTrack,loaderHint);
     status.appendChild(loaderWrap);
     var loaderStyle = document.createElement("style");
-    loaderStyle.textContent = "@keyframes forja-progress{from{transform:translateX(-45%);width:38%}to{transform:translateX(165%);width:58%}}#forja-preview-workspace{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}#forja-preview-column{display:flex;flex:1 1 auto;flex-direction:column;min-width:0;min-height:0;overflow:hidden}#forja-build-chat{display:flex;flex:0 0 340px;width:340px;max-width:42%;flex-direction:column;min-height:0;border-right:1px solid #E9DFD8;background:#fff}#forja-build-chat-messages{flex:1;min-height:0;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#fbf9f7}#forja-build-chat .forja-build-bubble{max-width:100%;padding:10px 12px;border-radius:12px;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}#forja-build-chat .assistant{background:#fff;border:1px solid #eee3dc;color:#3b3032;align-self:flex-start}#forja-build-chat .user{background:#c93f12;color:#fff;align-self:flex-end}#forja-build-chat-input{display:block;width:100%;resize:vertical;min-height:70px;max-height:150px;padding:10px;border:1px solid #e6d9d3;border-radius:10px;font:13px/1.4 system-ui,sans-serif;outline-color:#c93f12}#forja-build-chat-send{border:0;border-radius:10px;background:#c93f12;color:#fff;font-weight:700;padding:10px 14px;cursor:pointer}#forja-build-chat-send:disabled{opacity:.55;cursor:wait}@media(max-width:760px){#forja-preview-drawer{width:100vw}#forja-preview-workspace{flex-direction:column-reverse}#forja-build-chat{flex:0 0 42%;width:100%;max-width:none;border-right:0;border-top:1px solid #E9DFD8}#forja-build-chat-messages{padding:8px}#forja-build-chat-input{min-height:46px}#forja-preview-status{margin:8px;padding:16px;min-height:140px}#forja-preview-drawer header{padding:10px}#forja-preview-drawer header div{max-width:58vw}#forja-preview-drawer header div div:first-child{font-size:16px}#forja-preview-drawer button{font-size:12px;padding:8px 9px}#forja-preview-drawer textarea{margin:8px;width:calc(100% - 16px)}}";
+    loaderStyle.textContent = "@keyframes forja-progress{from{transform:translateX(-45%);width:38%}to{transform:translateX(165%);width:58%}}#forja-preview-workspace{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}#forja-preview-column{display:flex;flex:1 1 auto;flex-direction:column;min-width:0;min-height:0;overflow:hidden}#forja-build-chat{display:flex;flex:0 0 350px;width:350px;max-width:42%;flex-direction:column;min-height:0;border-right:1px solid #eee4df;background:#fff}#forja-build-chat-messages{flex:1;min-height:0;overflow:auto;padding:16px 14px;display:flex;flex-direction:column;gap:13px;background:linear-gradient(180deg,#fffdfc 0%,#faf7f5 100%);scroll-behavior:smooth}#forja-build-chat .forja-build-bubble{max-width:92%;padding:12px 14px;border-radius:15px;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 5px rgba(48,37,43,.035)}#forja-build-chat .assistant{background:#fff;border:1px solid #eee5e0;color:#45393b;align-self:flex-start;border-top-left-radius:5px}#forja-build-chat .user{background:linear-gradient(135deg,#d94b2c,#b9321e);color:#fff;align-self:flex-end;border:1px solid #c33d23;border-top-right-radius:5px;box-shadow:0 4px 12px rgba(201,63,18,.12)}#forja-build-chat-input{display:block;width:100%;resize:vertical;min-height:78px;max-height:150px;padding:12px 13px;border:1px solid #e8dcd5;border-radius:13px;background:#fff;color:#30252b;font:13px/1.5 system-ui,sans-serif;outline:none;box-shadow:0 2px 5px rgba(48,37,43,.025);transition:border-color .15s,box-shadow .15s}#forja-build-chat-input:focus{border-color:#d85a3b;box-shadow:0 0 0 3px rgba(201,63,18,.09)}#forja-build-chat-input::placeholder{color:#a08f8c}#forja-build-chat-send{border:0;border-radius:11px;background:linear-gradient(135deg,#d94b2c,#b9321e);color:#fff;font-weight:700;padding:10px 16px;cursor:pointer;box-shadow:0 4px 10px rgba(201,63,18,.16);transition:transform .15s,opacity .15s}#forja-build-chat-send:hover:not(:disabled){transform:translateY(-1px)}#forja-build-chat-send:disabled{opacity:.55;cursor:wait}#forja-build-chat-messages::-webkit-scrollbar{width:6px}#forja-build-chat-messages::-webkit-scrollbar-thumb{background:#e1d4ce;border-radius:99px}@media(max-width:760px){#forja-preview-drawer{width:100vw}#forja-preview-workspace{flex-direction:column-reverse}#forja-build-chat{flex:0 0 42%;width:100%;max-width:none;border-right:0;border-top:1px solid #E9DFD8}#forja-build-chat-messages{padding:8px}#forja-build-chat-input{min-height:46px}#forja-preview-status{margin:8px;padding:16px;min-height:140px}#forja-preview-drawer header{padding:10px}#forja-preview-drawer header div{max-width:58vw}#forja-preview-drawer header div div:first-child{font-size:16px}#forja-preview-drawer button{font-size:12px;padding:8px 9px}#forja-preview-drawer textarea{margin:8px;width:calc(100% - 16px)}}";
     document.head.appendChild(loaderStyle);
     var frame = document.createElement("iframe");
     frame.id = "forja-preview-frame";
@@ -520,17 +520,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     chatColumn.id = "forja-build-chat";
     chatColumn.setAttribute("aria-label", "Chat durante a criação");
     var chatHeader = document.createElement("div");
-    chatHeader.style.cssText = "padding:14px 14px 12px;border-bottom:1px solid #eee3dc;background:#fff";
-    chatHeader.innerHTML = '<strong style="display:block;font-size:14px;color:#30252B">✦ Chat da criação</strong><span style="display:block;font-size:11px;color:#8b7777;margin-top:4px">Converse com a IA enquanto a prévia é preparada</span>';
+    chatHeader.style.cssText = "padding:15px 14px 13px;border-bottom:1px solid #eee5e0;background:linear-gradient(180deg,#fff 0%,#fffaf8 100%);flex-shrink:0";
+    chatHeader.innerHTML = '<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(145deg,#ef6747,#b72d1b);display:grid;place-items:center;color:#fff;font-size:18px;box-shadow:0 4px 10px rgba(201,63,18,.16)">✦</div><div style="min-width:0;flex:1"><strong style="display:block;font-size:14px;letter-spacing:-.02em;color:#30252B">Assistente da Forja</strong><span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#7f706f;margin-top:4px"><span style="width:6px;height:6px;border-radius:50%;background:#32a46b;display:inline-block"></span>Contexto deste projeto</span></div></div>';
     var chatMessages = document.createElement("div");
     chatMessages.id = "forja-build-chat-messages";
     chatMessages.setAttribute("aria-live", "polite");
     var initialBubble = document.createElement("div");
     initialBubble.className = "forja-build-bubble assistant";
-    initialBubble.textContent = "Descreva ajustes, tire dúvidas ou informe erros aqui. A prévia e o carregamento ficam ao lado.";
+    initialBubble.textContent = "Olá! Sou seu assistente de criação. Posso ajudar a melhorar o visual, ajustar componentes, corrigir erros ou explicar o que está acontecendo na prévia. O que vamos aprimorar?";
     chatMessages.appendChild(initialBubble);
     var chatForm = document.createElement("div");
-    chatForm.style.cssText = "padding:10px;display:flex;flex-direction:column;gap:8px;border-top:1px solid #eee3dc;background:#fff";
+    chatForm.style.cssText = "padding:12px;display:flex;flex-direction:column;gap:9px;border-top:1px solid #eee5e0;background:#fff;flex-shrink:0";
     var chatInput = document.createElement("textarea");
     chatInput.id = "forja-build-chat-input";
     chatInput.rows = 3;
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     chatActions.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px";
     var chatHint = document.createElement("span");
     chatHint.textContent = "Enter para enviar · Shift+Enter para nova linha";
-    chatHint.style.cssText = "font-size:10px;color:#8b7777";
+    chatHint.style.cssText = "font-size:10px;color:#9a8988;line-height:1.4";
     var chatSend = document.createElement("button");
     chatSend.id = "forja-build-chat-send";
     chatSend.type = "button";
@@ -602,8 +602,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     frame.addEventListener("load", function(){
       if (!drawer || drawer.frame !== frame || !drawer.isRendering) return;
       drawer.isRendering = false;
-      drawer.status.style.display = activeTab === "preview" ? "none" : "flex";
-      if (activeTab === "preview") { drawer.previewStage.style.display = "flex"; frame.style.display = "block"; }
+      showTab(activeTab);
+      if (activeTab === "preview") {
+        drawer.status.style.display = "none";
+        drawer.previewStage.style.display = "flex";
+        frame.style.display = "block";
+      }
     });
     overlay.appendChild(panel);
     overlay.addEventListener("click", function(e){ if(e.target === overlay) closeDrawer(); });
@@ -777,7 +781,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       d.frame.style.display = "none";
       d.status.style.display = "flex";
       d.frame.srcdoc = generatedCode;
-      showTab("preview");
+      // A aba já foi selecionada no início da geração. Evita ocultar o iframe
+      // caso o evento load chegue antes desta continuação assíncrona.
     } catch (error) {
       d.isRendering = false;
       d.status.style.display = "flex";
