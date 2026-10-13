@@ -48,6 +48,6 @@ function home(){
   if(host)host.remove();
   main=null;
 }
-document.addEventListener('click',e=>{let a=null;const path=typeof e.composedPath==='function'?e.composedPath():[];for(const node of path){if(node&&node.tagName==='A'){a=node;break;}}if(!a&&e.target&&e.target.closest)a=e.target.closest('a');if(!a)return;const label=(a.textContent||'').replace(/\s+/g,' ').trim();if(label==='Integrações'){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();open(a);}else if(label==='Início'&&main&&homeHTML!==null){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();home();}},true);
+window.addEventListener('click',e=>{let a=null;const path=typeof e.composedPath==='function'?e.composedPath():[];for(const node of path){if(node&&node.tagName==='A'){a=node;break;}}if(!a&&e.target&&e.target.closest)a=e.target.closest('a');if(!a)return;const label=(a.textContent||'').replace(/\s+/g,' ').trim();if(label==='Integrações'){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();open(a);}else if(label==='Início'&&main&&homeHTML!==null){e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();home();}},true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.querySelector('#forja-integrations .backdrop');if(m)m.remove();}});
 })();
