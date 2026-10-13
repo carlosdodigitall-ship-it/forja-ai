@@ -237,7 +237,7 @@ async function requestGemini(apiKey, prompt) {
     .split(",").map(function(v){return v.trim();}).filter(Boolean);
   const preferredModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
   const models = Array.from(new Set(preferredModels.concat(configuredModels).filter(function(model){
-    return !/^gemini-2\\.5-flash$/i.test(model);
+    return !/^gemini-2\.5-flash$/i.test(model);
   })));
   let upstream;
   let detail = "";
@@ -267,7 +267,7 @@ async function requestGemini(apiKey, prompt) {
     // Se um modelo não estiver habilitado para esta chave, tente o próximo modelo.
     // Erros de autenticação/permissão são devolvidos imediatamente; erros de modelo
     // (por exemplo, 400/404 informando que não está disponível) permitem fallback.
-    const modelUnavailable = /model .*not found|not available to new users|is not supported|unknown model|model.*not available|unsupported model/i.test(detail);
+    const modelUnavailable = /model .*not found|not available to new users|no longer available to new users|is not supported|unknown model|model.*not available|unsupported model/i.test(detail);
     if (![408,429,500,502,503,504].includes(upstream.status) && !modelUnavailable) {
       const e = new Error("O Google Gemini recusou a solicitação. " + detail);
       e.status = upstream.status === 401 || upstream.status === 403 ? 502 : upstream.status;
