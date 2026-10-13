@@ -298,6 +298,43 @@ document.addEventListener('DOMContentLoaded', async function() {
     const resourceScript = '<script>window.__resources = ' +
       JSON.stringify(resourceMap).replace(/<\//g, '<\\/') +
       ';</' + 'script>';
+    const themeStyle = '<style id="forja-constellation-theme">
+:root{color-scheme:dark;--forja-bg:#10090f;--forja-panel:#1a1019;--forja-panel-2:#21121f;--forja-border:#482235;--forja-red:#e34a62;--forja-red-2:#a82045;--forja-text:#fff1f5;--forja-muted:#c3a6b3}
+html,body{background:#10090f!important;color:#fff1f5!important}
+body{background-image:radial-gradient(ellipse at 12% 8%,rgba(181,35,75,.25),transparent 35%),radial-gradient(ellipse at 88% 20%,rgba(104,32,92,.18),transparent 32%),radial-gradient(ellipse at 55% 100%,rgba(107,23,53,.18),transparent 40%)!important}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.32;background-image:radial-gradient(1px 1px at 8% 18%,#ffdce8 99%,transparent),radial-gradient(1px 1px at 22% 76%,#f9b9d0 99%,transparent),radial-gradient(1px 1px at 46% 24%,#fff 99%,transparent),radial-gradient(1px 1px at 71% 67%,#ffdce8 99%,transparent),radial-gradient(1px 1px at 91% 34%,#f9b9d0 99%,transparent),radial-gradient(1px 1px at 63% 12%,#fff 99%,transparent);background-size:340px 270px}
+body>*{position:relative;z-index:1}
+button,[role=button],a[role=button]{transition:background .18s ease,border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+button:hover,[role=button]:hover{filter:brightness(1.08)}
+input,textarea,select{background:#160e17!important;color:#fff1f5!important;border-color:#563044!important}
+input::placeholder,textarea::placeholder{color:#9f8191!important}
+button{accent-color:#e34a62}
+#forja-auth-overlay{background:radial-gradient(ellipse at 18% 12%,rgba(218,48,87,.3),transparent 38%),radial-gradient(ellipse at 85% 82%,rgba(114,36,105,.27),transparent 40%),#0c080e!important;color:#fff1f5!important}
+#forja-auth-overlay:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.42;background-image:radial-gradient(1px 1px at 12% 22%,#fff 99%,transparent),radial-gradient(1px 1px at 83% 17%,#ffc4d7 99%,transparent),radial-gradient(1px 1px at 67% 72%,#fff 99%,transparent),radial-gradient(1px 1px at 27% 86%,#ffc4d7 99%,transparent);background-size:260px 230px}
+#forja-auth-overlay>main{position:relative;background:linear-gradient(145deg,rgba(35,19,32,.97),rgba(19,12,21,.98))!important;border:1px solid #673049!important;border-radius:24px!important;box-shadow:0 28px 100px rgba(0,0,0,.55),0 0 50px rgba(196,38,82,.12)!important;color:#fff1f5!important}
+#forja-auth-overlay h1,#forja-auth-overlay strong{color:#fff1f5!important}
+#forja-auth-overlay p,#forja-auth-overlay label{color:#d0b2c0!important}
+#forja-auth-overlay input{background:#100a12!important;border-color:#583044!important;color:#fff1f5!important}
+#forja-auth-overlay input:focus{border-color:#f05c78!important;box-shadow:0 0 0 3px rgba(227,74,98,.16)!important}
+#forja-auth-submit{background:linear-gradient(135deg,#f15b78,#b6224c)!important;box-shadow:0 8px 24px rgba(227,50,91,.25)!important}
+#forja-auth-switch{color:#ff8da6!important}
+#forja-auth-reset{color:#c3a6b3!important}
+#forja-auth-error{background:#32131f!important;border-color:#8d304e!important;color:#ffc3d0!important}
+#forja-account-chip{background:#1a1019!important;border-color:#563044!important;color:#fff1f5!important}
+#forja-preview-drawer{background:#130b13!important;color:#fff1f5!important;border-color:#482235!important;box-shadow:0 24px 90px rgba(0,0,0,.6)!important}
+#forja-preview-drawer header,#forja-build-chat>div:first-child,#forja-build-chat>div:last-child{background:linear-gradient(180deg,#21121f,#170d17)!important;border-color:#482235!important}
+#forja-preview-workspace,#forja-preview-column{background:#10090f!important}
+#forja-build-chat{background:#170d17!important;border-color:#482235!important}
+#forja-build-chat-messages{background:linear-gradient(180deg,#170d17,#10090f)!important}
+#forja-build-chat .assistant{background:#241523!important;border-color:#593047!important;color:#f8e8ef!important}
+#forja-build-chat-input{background:#10090f!important;border-color:#563044!important;color:#fff1f5!important}
+#forja-build-chat-input:focus{border-color:#e34a62!important;box-shadow:0 0 0 3px rgba(227,74,98,.15)!important}
+#forja-build-chat-send{background:linear-gradient(135deg,#f15b78,#b6224c)!important;box-shadow:0 5px 18px rgba(227,50,91,.22)!important}
+#forja-preview-status{background:radial-gradient(ellipse at 50% 0,rgba(174,35,79,.18),transparent 58%),#170d17!important;border-color:#482235!important;color:#fff1f5!important}
+#forja-preview-code{background:#10090f!important;border-color:#482235!important;color:#ffeef4!important}
+@media(max-width:760px){#forja-auth-overlay{padding:14px!important}#forja-auth-overlay>main{padding:25px!important}}
+</style>';
+
     // Inject after <head> so the DOCTYPE stays first; prepending the script
     // would push the parser into quirks mode. DOMParser always emits a <head>
     // (synthesizing one if the source HTML omitted it) but may carry
@@ -306,7 +343,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const headOpen = template.match(/<head[^>]*>/i);
     if (headOpen) {
       const i = headOpen.index + headOpen[0].length;
-      template = template.slice(0, i) + resourceScript + template.slice(i);
+      template = template.slice(0, i) + resourceScript + themeStyle + template.slice(i);
     }
 
     // Parse the template and swap the root element. Scripts inserted via
