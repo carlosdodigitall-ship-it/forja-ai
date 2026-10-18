@@ -631,6 +631,8 @@ module.exports = async function handler(req, res) {
 
   try {
     const selected = await resolveProvider(req, requested);
+    // Authenticate and resolve the configured provider before making any paid external scrape request.
+    prompt = await enrichPromptWithReference(prompt);
     const apiKey = selected.credentials.apiKey;
     let upstream;
     if (selected.provider === "gemini") {
