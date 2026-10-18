@@ -1172,54 +1172,144 @@ html svg[fill="#FFFFFF"]{filter:none}
   function renderAuthForm() {
     if (!authOverlay) return;
     const isSignup = authMode === "signup";
-    authOverlay.querySelector("#forja-auth-title").textContent = isSignup ? "Crie sua conta" : "Entre na Forja AI";
-    authOverlay.querySelector("#forja-auth-subtitle").textContent = isSignup ? "Crie seu espaço e comece com o plano Gratuito." : "Entre para acessar seus projetos e seu plano.";
-    authOverlay.querySelector("#forja-auth-name-wrap").style.display = isSignup ? "block" : "none";
-    authOverlay.querySelector("#forja-auth-submit").textContent = isSignup ? "Criar conta" : "Entrar";
-    authOverlay.querySelector("#forja-auth-switch").textContent = isSignup ? "Já tenho uma conta — entrar" : "Não tem conta? Criar cadastro";
-    authOverlay.querySelector("#forja-auth-reset").style.display = isSignup ? "none" : "inline";
+    authOverlay.querySelector("#forja-auth-title").textContent = isSignup ? "Crie sua conta" : "Bem-vindo de volta";
+    authOverlay.querySelector("#forja-auth-subtitle").textContent = isSignup ? "Monte seu espaço de criação e transforme ideias em projetos." : "Entre para continuar criando com a Forja AI.";
+    authOverlay.querySelector("#forja-auth-name-wrap").style.display = isSignup ? "grid" : "none";
+    authOverlay.querySelector("#forja-auth-confirm-wrap").style.display = isSignup ? "grid" : "none";
+    authOverlay.querySelector("#forja-auth-terms-wrap").style.display = isSignup ? "flex" : "none";
+    authOverlay.querySelector("#forja-auth-password").autocomplete = isSignup ? "new-password" : "current-password";
+    authOverlay.querySelector("#forja-auth-submit").textContent = isSignup ? "Criar minha conta" : "Entrar na minha conta";
+    authOverlay.querySelector("#forja-auth-switch").textContent = isSignup ? "Entrar" : "Criar conta";
+    authOverlay.querySelector("#forja-auth-reset").style.display = isSignup ? "none" : "inline-flex";
     authOverlay.querySelector("#forja-auth-error").style.display = authError ? "block" : "none";
     authOverlay.querySelector("#forja-auth-error").textContent = authError || "";
+    const footer = authOverlay.querySelector("#forja-auth-footer");
+    if (footer) footer.textContent = isSignup ? "Ao criar sua conta, você começa no plano Gratuito." : "Seu espaço de criação, seus projetos e suas ideias em um só lugar.";
   }
 
   function mountAuthOverlay() {
     if (authOverlay || !document.body) return;
     authOverlay = document.createElement("div");
     authOverlay.id = "forja-auth-overlay";
-    authOverlay.style.cssText = "position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;overflow:auto;padding:24px;background:radial-gradient(circle at 15% 15%,#fbe3d7 0,transparent 36%),radial-gradient(circle at 90% 85%,#f5d6c8 0,transparent 34%),#fbf7f4;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#241714";
+    authOverlay.style.cssText = "position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;overflow:auto;padding:24px;background:#0b0b0f;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#f5f5f7";
     authOverlay.innerHTML = `
-      <main style="width:min(100%,440px);padding:34px;background:rgba(255,255,255,.96);border:1px solid #eaded8;border-radius:24px;box-shadow:0 24px 80px rgba(74,34,20,.14)">
-        <div style="display:flex;align-items:center;gap:11px;margin-bottom:26px">
-          <div style="width:42px;height:42px;border-radius:13px;background:#c93f12;display:grid;place-items:center;color:#fff;font-size:24px;font-weight:900">F</div>
-          <div><div style="font-size:24px;font-weight:850;letter-spacing:-1px">Forja AI</div><div style="font-size:12px;color:#88736b">Seu espaço de criação</div></div>
-        </div>
-        <h1 id="forja-auth-title" style="font-size:27px;letter-spacing:-.8px;margin:0 0 7px">Entre na Forja AI</h1>
-        <p id="forja-auth-subtitle" style="font-size:14px;line-height:1.6;color:#7a6861;margin:0 0 22px">Entre para acessar seus projetos e seu plano.</p>
-        <form id="forja-auth-form" style="display:grid;gap:13px">
-          <label id="forja-auth-name-wrap" style="display:none;font-size:13px;font-weight:700">Seu nome<input id="forja-auth-name" autocomplete="name" maxlength="80" placeholder="Como podemos te chamar?" style="display:block;width:100%;margin-top:7px;padding:13px 14px;border:1px solid #e5d8d1;border-radius:11px;outline-color:#c93f12;font:14px system-ui"></label>
-          <label style="font-size:13px;font-weight:700">E-mail<input id="forja-auth-email" type="email" autocomplete="email" required placeholder="voce@exemplo.com" style="display:block;width:100%;margin-top:7px;padding:13px 14px;border:1px solid #e5d8d1;border-radius:11px;outline-color:#c93f12;font:14px system-ui"></label>
-          <label style="font-size:13px;font-weight:700">Senha<input id="forja-auth-password" type="password" autocomplete="current-password" minlength="6" required placeholder="Mínimo de 6 caracteres" style="display:block;width:100%;margin-top:7px;padding:13px 14px;border:1px solid #e5d8d1;border-radius:11px;outline-color:#c93f12;font:14px system-ui"></label>
-          <div id="forja-auth-error" role="alert" style="display:none;padding:11px 12px;background:#fff0ed;border:1px solid #f2c6bc;border-radius:10px;color:#9c2f1a;font-size:13px;line-height:1.5"></div>
-          <button id="forja-auth-submit" type="submit" style="border:0;border-radius:12px;padding:14px;background:#c93f12;color:#fff;font-size:15px;font-weight:800;cursor:pointer">Entrar</button>
-        </form>
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:17px">
-          <button id="forja-auth-switch" type="button" style="border:0;background:none;color:#a53512;font-size:13px;font-weight:750;cursor:pointer">Não tem conta? Criar cadastro</button>
-          <button id="forja-auth-reset" type="button" style="border:0;background:none;color:#76635c;font-size:12px;text-decoration:underline;cursor:pointer">Esqueci a senha</button>
-        </div>
-        <p style="margin:22px 0 0;padding-top:16px;border-top:1px solid #f0e6e0;color:#8b7b74;font-size:11px;line-height:1.5">Cada conta possui seu próprio espaço. Novos cadastros começam no plano Gratuito, marcado como ativo.</p>
+      <style>
+        #forja-auth-overlay *{box-sizing:border-box}
+        #forja-auth-overlay .fa-shell{width:min(100%,1000px);min-height:590px;display:grid;grid-template-columns:1fr 440px;overflow:hidden;background:#111116;border:1px solid #30303b;border-radius:28px;box-shadow:0 35px 110px rgba(0,0,0,.55)}
+        #forja-auth-overlay .fa-brand{position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:42px;background:radial-gradient(ellipse at 15% 12%,rgba(229,72,77,.22),transparent 45%),linear-gradient(145deg,#171118,#111116 72%);border-right:1px solid #30232b;overflow:hidden}
+        #forja-auth-overlay .fa-brand:after{content:"";position:absolute;width:360px;height:360px;right:-150px;top:110px;border-radius:50%;border:1px solid rgba(229,72,77,.18);box-shadow:0 0 0 35px rgba(229,72,77,.035),0 0 0 70px rgba(229,72,77,.025);pointer-events:none}
+        #forja-auth-overlay .fa-logo{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+        #forja-auth-overlay .fa-logo-mark{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#ff6b72,#a92d46);font-size:22px;font-weight:900;color:#fff;box-shadow:0 10px 30px rgba(229,72,77,.22)}
+        #forja-auth-overlay .fa-brand-copy{position:relative;z-index:1;margin:64px 0}
+        #forja-auth-overlay .fa-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid rgba(229,72,77,.3);border-radius:999px;background:rgba(229,72,77,.08);color:#ff9298;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+        #forja-auth-overlay .fa-brand h2{max-width:460px;margin:22px 0 14px;color:#fff;font-size:clamp(32px,4vw,48px);line-height:1.08;letter-spacing:-.055em;font-weight:800}
+        #forja-auth-overlay .fa-brand-copy p{max-width:430px;margin:0;color:#aaa3ad;font-size:15px;line-height:1.8}
+        #forja-auth-overlay .fa-feature-list{display:grid;gap:13px;position:relative;z-index:1}
+        #forja-auth-overlay .fa-feature{display:flex;align-items:center;gap:11px;color:#d6d0d8;font-size:13px}
+        #forja-auth-overlay .fa-feature-icon{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:#241820;border:1px solid #4a2833;color:#ff858d;font-size:14px}
+        #forja-auth-overlay .fa-form-side{display:flex;align-items:center;justify-content:center;padding:38px 34px;background:linear-gradient(180deg,#15151b,#111116)}
+        #forja-auth-overlay .fa-form-content{width:100%;max-width:360px}
+        #forja-auth-overlay .fa-mobile-logo{display:none}
+        #forja-auth-overlay #forja-auth-title{margin:0 0 9px;color:#f7f4f6;font-size:29px;font-weight:800;letter-spacing:-.045em;line-height:1.15}
+        #forja-auth-overlay #forja-auth-subtitle{margin:0 0 27px;color:#a1a1aa;font-size:13px;line-height:1.7}
+        #forja-auth-overlay .fa-field{display:grid;gap:8px;margin-bottom:16px;color:#ddd7df;font-size:12px;font-weight:700}
+        #forja-auth-overlay .fa-input-wrap{position:relative}
+        #forja-auth-overlay .fa-field input{display:block;width:100%;height:47px;margin:0;padding:0 14px;border:1px solid #34303a;border-radius:12px;background:#0d0d12!important;color:#f5f5f7!important;outline:none;font:14px Inter,system-ui,sans-serif;transition:border-color .18s,box-shadow .18s}
+        #forja-auth-overlay .fa-field input:focus{border-color:#e5484d!important;box-shadow:0 0 0 3px rgba(229,72,77,.13)}
+        #forja-auth-overlay .fa-field input::placeholder{color:#6f6975!important}
+        #forja-auth-overlay .fa-password-toggle{position:absolute;top:50%;right:9px;transform:translateY(-50%);border:0;background:transparent!important;color:#a1a1aa!important;padding:7px;font-size:11px;font-weight:700;cursor:pointer}
+        #forja-auth-overlay .fa-password-toggle:hover{color:#fff!important}
+        #forja-auth-overlay .fa-forgot-row{display:flex;justify-content:flex-end;margin:-5px 0 18px}
+        #forja-auth-overlay #forja-auth-reset{padding:0;border:0;background:transparent!important;color:#ff858d!important;font-size:12px;font-weight:700;text-decoration:none;cursor:pointer}
+        #forja-auth-overlay #forja-auth-submit{width:100%;min-height:48px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:linear-gradient(135deg,#e5484d,#a92d46)!important;color:#fff!important;font-size:14px;font-weight:800;box-shadow:0 10px 26px rgba(169,45,70,.2);cursor:pointer;transition:transform .18s,filter .18s}
+        #forja-auth-overlay #forja-auth-submit:hover{filter:brightness(1.08);transform:translateY(-1px)}
+        #forja-auth-overlay #forja-auth-submit:disabled{opacity:.65;cursor:wait;transform:none}
+        #forja-auth-overlay #forja-auth-error{margin:0 0 15px;padding:11px 12px;border:1px solid #773441;border-radius:11px;background:#32191f;color:#ffc5ce;font-size:12px;line-height:1.55}
+        #forja-auth-overlay .fa-switch-row{margin-top:21px;text-align:center;color:#a1a1aa;font-size:12px;line-height:1.7}
+        #forja-auth-overlay #forja-auth-switch{padding:0;border:0;background:transparent!important;color:#ff858d!important;font-size:12px;font-weight:800;cursor:pointer}
+        #forja-auth-overlay .fa-terms{display:flex;align-items:flex-start;gap:9px;margin:0 0 17px;color:#a1a1aa;font-size:11px;line-height:1.6}
+        #forja-auth-overlay .fa-terms input{width:14px;height:14px;margin-top:2px;accent-color:#e5484d;flex:0 0 auto}
+        #forja-auth-overlay .fa-terms a{color:#ff858d;text-decoration:underline}
+        #forja-auth-overlay #forja-auth-footer{margin:23px 0 0;padding-top:17px;border-top:1px solid #2a2831;color:#77717e;font-size:11px;line-height:1.6;text-align:center}
+        @media(max-width:760px){#forja-auth-overlay{padding:14px!important;align-items:flex-start!important}#forja-auth-overlay .fa-shell{grid-template-columns:1fr;min-height:0;max-width:480px;border-radius:22px}#forja-auth-overlay .fa-brand{display:none}#forja-auth-overlay .fa-form-side{padding:30px 24px}#forja-auth-overlay .fa-mobile-logo{display:flex;align-items:center;gap:10px;margin-bottom:30px}#forja-auth-overlay #forja-auth-title{font-size:27px}}
+        @media(max-width:380px){#forja-auth-overlay .fa-form-side{padding:25px 18px}#forja-auth-overlay .fa-logo-mark{width:39px;height:39px}}
+      </style>
+      <main class="fa-shell">
+        <section class="fa-brand">
+          <div class="fa-logo"><div class="fa-logo-mark">F</div><div><div style="font-size:22px;font-weight:850;letter-spacing:-.05em;color:#fff">Forja AI</div><div style="margin-top:3px;font-size:11px;color:#aaa3ad">Seu estúdio de criação inteligente</div></div></div>
+          <div class="fa-brand-copy">
+            <span class="fa-eyebrow"><span style="width:6px;height:6px;border-radius:50%;background:#ff858d;box-shadow:0 0 12px #e5484d"></span> CRIE SEM LIMITES</span>
+            <h2>Suas ideias.<br>Construídas com IA.</h2>
+            <p>Crie sites, páginas de vendas e aplicações num espaço feito para transformar suas ideias em projetos reais.</p>
+          </div>
+          <div class="fa-feature-list">
+            <div class="fa-feature"><span class="fa-feature-icon">✦</span><span>Criação assistida por inteligência artificial</span></div>
+            <div class="fa-feature"><span class="fa-feature-icon">⌘</span><span>Seus projetos organizados em um só lugar</span></div>
+            <div class="fa-feature"><span class="fa-feature-icon">↗</span><span>Comece gratuitamente e evolua no seu ritmo</span></div>
+          </div>
+        </section>
+        <section class="fa-form-side">
+          <div class="fa-form-content">
+            <div class="fa-mobile-logo"><div class="fa-logo-mark">F</div><div><div style="font-size:20px;font-weight:850;letter-spacing:-.05em;color:#fff">Forja AI</div><div style="font-size:11px;color:#aaa3ad">Seu estúdio de criação</div></div></div>
+            <h1 id="forja-auth-title">Bem-vindo de volta</h1>
+            <p id="forja-auth-subtitle">Entre para continuar criando com a Forja AI.</p>
+            <form id="forja-auth-form" novalidate>
+              <label class="fa-field" id="forja-auth-name-wrap" style="display:none">Seu nome
+                <input id="forja-auth-name" autocomplete="name" maxlength="80" placeholder="Como podemos te chamar?">
+              </label>
+              <label class="fa-field">E-mail
+                <input id="forja-auth-email" type="email" autocomplete="email" required placeholder="voce@exemplo.com">
+              </label>
+              <label class="fa-field">Senha
+                <span class="fa-input-wrap"><input id="forja-auth-password" type="password" autocomplete="current-password" minlength="6" required placeholder="Mínimo de 6 caracteres" style="padding-right:68px"><button class="fa-password-toggle" type="button" data-toggle-password="forja-auth-password">Mostrar</button></span>
+              </label>
+              <label class="fa-field" id="forja-auth-confirm-wrap" style="display:none">Confirmar senha
+                <span class="fa-input-wrap"><input id="forja-auth-confirm" type="password" autocomplete="new-password" minlength="6" placeholder="Digite a senha novamente" style="padding-right:68px"><button class="fa-password-toggle" type="button" data-toggle-password="forja-auth-confirm">Mostrar</button></span>
+              </label>
+              <div class="fa-forgot-row"><button id="forja-auth-reset" type="button">Esqueci minha senha</button></div>
+              <label class="fa-terms" id="forja-auth-terms-wrap" style="display:none"><input id="forja-auth-terms" type="checkbox"><span>Concordo com os <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>.</span></label>
+              <div id="forja-auth-error" role="alert" aria-live="polite" style="display:none"></div>
+              <button id="forja-auth-submit" type="submit">Entrar na minha conta</button>
+            </form>
+            <div class="fa-switch-row"><span id="forja-auth-switch-prompt">Ainda não tem conta?</span> <button id="forja-auth-switch" type="button">Criar conta</button></div>
+            <p id="forja-auth-footer">Seu espaço de criação, seus projetos e suas ideias em um só lugar.</p>
+          </div>
+        </section>
       </main>`;
     document.body.appendChild(authOverlay);
 
     authOverlay.querySelector("#forja-auth-switch").addEventListener("click", () => {
       authMode = authMode === "login" ? "signup" : "login";
       authError = null;
+      const prompt = authOverlay.querySelector("#forja-auth-switch-prompt");
+      if (prompt) prompt.textContent = authMode === "signup" ? "Já tem uma conta?" : "Ainda não tem conta?";
+      authOverlay.querySelector("#forja-auth-confirm").value = "";
+      authOverlay.querySelector("#forja-auth-terms").checked = false;
       renderAuthForm();
+    });
+    authOverlay.querySelectorAll("[data-toggle-password]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const input = authOverlay.querySelector("#" + button.getAttribute("data-toggle-password"));
+        if (!input) return;
+        const reveal = input.type === "password";
+        input.type = reveal ? "text" : "password";
+        button.textContent = reveal ? "Ocultar" : "Mostrar";
+      });
     });
     authOverlay.querySelector("#forja-auth-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const email = authOverlay.querySelector("#forja-auth-email").value.trim();
       const password = authOverlay.querySelector("#forja-auth-password").value;
       const displayName = authOverlay.querySelector("#forja-auth-name").value.trim();
+      const confirmPassword = authOverlay.querySelector("#forja-auth-confirm").value;
+      if (authMode === "signup" && password !== confirmPassword) {
+        showAuthError("As senhas não coincidem. Confira os dois campos.");
+        return;
+      }
+      if (authMode === "signup" && !authOverlay.querySelector("#forja-auth-terms").checked) {
+        showAuthError("Aceite os Termos de Uso e a Política de Privacidade para criar sua conta.");
+        return;
+      }
       const submit = authOverlay.querySelector("#forja-auth-submit");
       submit.disabled = true;
       submit.textContent = authMode === "signup" ? "Criando conta..." : "Entrando...";
