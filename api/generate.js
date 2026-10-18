@@ -537,11 +537,10 @@ async function enrichPromptWithReference(prompt) {
     throw error;
   }
   const hostname = parsedUrl.hostname.toLowerCase();
-  const privateIpv4 = /^(127\.|10\.|192\.168\.|169\.254\.)/.test(hostname) ||
-    /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname);
+  const isIpLiteral = /^\[.*\]$/.test(hostname) || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
   if (parsedUrl.protocol !== "https:" || parsedUrl.username || parsedUrl.password ||
       hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local") ||
-      privateIpv4 || hostname === "::1" || hostname.startsWith("fc") || hostname.startsWith("fd")) {
+      isIpLiteral) {
     const error = new Error("Para recriar um site, informe um endereço público HTTPS. Endereços locais ou privados não são aceitos.");
     error.status = 400;
     throw error;
