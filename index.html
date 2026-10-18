@@ -1177,6 +1177,9 @@ html svg[fill="#FFFFFF"]{filter:none}
     authOverlay.querySelector("#forja-auth-name-wrap").style.display = isSignup ? "grid" : "none";
     authOverlay.querySelector("#forja-auth-confirm-wrap").style.display = isSignup ? "grid" : "none";
     authOverlay.querySelector("#forja-auth-terms-wrap").style.display = isSignup ? "flex" : "none";
+    authOverlay.querySelector("#forja-auth-name").required = isSignup;
+    authOverlay.querySelector("#forja-auth-confirm").required = isSignup;
+    authOverlay.querySelector("#forja-auth-terms").required = isSignup;
     authOverlay.querySelector("#forja-auth-password").autocomplete = isSignup ? "new-password" : "current-password";
     authOverlay.querySelector("#forja-auth-submit").textContent = isSignup ? "Criar minha conta" : "Entrar na minha conta";
     authOverlay.querySelector("#forja-auth-switch").textContent = isSignup ? "Entrar" : "Criar conta";
@@ -1253,7 +1256,7 @@ html svg[fill="#FFFFFF"]{filter:none}
             <div class="fa-mobile-logo"><div class="fa-logo-mark">F</div><div><div style="font-size:20px;font-weight:850;letter-spacing:-.05em;color:#fff">Forja AI</div><div style="font-size:11px;color:#aaa3ad">Seu estúdio de criação</div></div></div>
             <h1 id="forja-auth-title">Bem-vindo de volta</h1>
             <p id="forja-auth-subtitle">Entre para continuar criando com a Forja AI.</p>
-            <form id="forja-auth-form" novalidate>
+            <form id="forja-auth-form">
               <label class="fa-field" id="forja-auth-name-wrap" style="display:none">Seu nome
                 <input id="forja-auth-name" autocomplete="name" maxlength="80" placeholder="Como podemos te chamar?">
               </label>
