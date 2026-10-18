@@ -529,7 +529,7 @@ async function enrichPromptWithReference(prompt) {
   const match = prompt.match(/https?:\/\/\S+/i);
   if (!hasRecreationIntent || !match) return prompt;
 
-  const rawUrl = match[0].replace(/[),.;!?'"\\]]+$/, "");
+  const rawUrl = match[0].replace(/[),.;!?]+$/, "").replace(/["']+$/, "");
   let parsedUrl;
   try { parsedUrl = new URL(rawUrl); } catch (_) {
     const error = new Error("O endereço informado para referência não é uma URL válida.");
