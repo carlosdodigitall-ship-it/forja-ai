@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - 'lib/ai/**'
+      - 'api/generate.js'
       - 'tests/**'
       - '.github/workflows/ai-engine-v2.yml'
 
@@ -22,7 +23,6 @@ jobs:
           node-version: '20'
       - name: Check syntax
         run: |
-          node --check lib/ai/provider-policy.js
-          node --check tests/provider-policy.test.js
+          for file in api/generate.js lib/ai/*.js tests/*.test.js; do node --check "$file"; done
       - name: Run unit tests
         run: node --test tests/*.test.js
