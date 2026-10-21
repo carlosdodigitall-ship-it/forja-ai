@@ -1,0 +1,21 @@
+// Reference Firestore rules fragment for merging into the project's deployed rules.
+// Do NOT deploy as a standalone ruleset without preserving existing application rules.
+// The Admin SDK bypasses Firestore security rules; only trusted server code may write.
+// match /users/{uid}/billing/{docId} {
+//   allow read: if request.auth != null && request.auth.uid == uid;
+//   allow write: if false;
+// }
+// match /users/{uid}/creditOperations/{operationId} {
+//   allow read: if request.auth != null && request.auth.uid == uid;
+//   allow write: if false;
+// }
+// match /users/{uid}/generationJobs/{operationId} {
+//   allow read: if request.auth != null && request.auth.uid == uid;
+//   allow write: if false;
+// }
+// match /users/{uid}/generationResults/{operationId} {
+//   allow read: if request.auth != null && request.auth.uid == uid;
+//   allow write: if false;
+// }
+// IMPORTANT: A broad ancestor wildcard rule that grants writes can override
+// these denies because Firestore rules are OR-composed across matching rules.
