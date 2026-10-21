@@ -1,3 +1,5 @@
+const { creditsEnabled } = require("../lib/ai/generation-billing");
+const { executeBilledGeneration } = require("../lib/ai/billed-generation");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 
@@ -437,7 +439,7 @@ function startEventStream(res) {
   if (res.flushHeaders) res.flushHeaders();
 }
 
-async function forwardStream(res, upstream, provider, model, controller, streamTimer, deadlineAt) {
+async function forwardStream(res, upstream, provider, model, controller, streamTimer, deadlineAt, billing) {
   startEventStream(res);
   function send(event) { res.write("data: " + JSON.stringify(event) + "\n\n"); }
   let buffer = "";
@@ -508,6 +510,15 @@ async function forwardStream(res, upstream, provider, model, controller, streamT
       send({ type:"error", error:"A IA encerrou a resposta antes de concluir o documento HTML. O código anterior foi preservado. Tente novamente com uma solicitação menor." });
       return res.end();
     }
+    if (billing) {
+      try {
+        const saved = await billing.complete(generated);
+        send({ type:"billing", operationId:saved.operationId });
+      } catch (billingError) {
+        send({ type:"error", error:"Não foi possível registrar a geração e confirmar os créditos. Nenhuma atualização foi aplicada." });
+        return res.end();
+      }
+    }
     send({ type:"done", code:generated, model:model, provider:provider });
     return res.end();
   } catch (streamError) {
@@ -519,6 +530,9 @@ async function forwardStream(res, upstream, provider, model, controller, streamT
     try { send({ type:"error", error:message }); } catch (_) {}
     return res.end();
   } finally {
+    if (billing && !billing.completed) {
+      try { await billing.fail(); } catch (_) { /* reserved for reconciliation */ }
+    }
     if (streamTimer) clearTimeout(streamTimer);
   }
 }
@@ -561,20 +575,55 @@ module.exports = async function handler(req, res) {
   try {
     const selected = await resolveProvider(req, requested);
     const apiKey = selected.credentials.apiKey;
+    let billing = null;
+    if (creditsEnabled()) {
+      // Authenticated UID is derived from a verified Firebase token, never req.body.
+      const verifiedUser = await verifyFirebaseIdToken(getBearer(req));
+      const services = getAdmin();
+      let reservation = null;
+      let job = null;
+      const { beginGeneration, finishGeneration } = require("../lib/ai/generation-billing");
+      const { createJob, completeJob } = require("../lib/ai/generation-jobs");
+      const { saveValidatedResult } = require("../lib/ai/generation-results");
+      reservation = await beginGeneration(services.db, verifiedUser.sub);
+      try { job = await createJob(services.db, reservation); }
+      catch (error) {
+        try { await finishGeneration(services.db, reservation, false); } catch (_) {}
+        throw error;
+      }
+      billing = {
+        completed: false,
+        async complete(html) {
+          await saveValidatedResult(services.db, { ...reservation, html });
+          await completeJob(services.db, job, true);
+          await finishGeneration(services.db, reservation, true);
+          this.completed = true;
+          return reservation;
+        },
+        async fail() {
+          // Never refund a successfully persisted generation.
+          const ref = services.db.collection("users").doc(reservation.uid).collection("generationResults").doc(reservation.operationId);
+          const snap = await ref.get();
+          if (snap.exists) return;
+          await completeJob(services.db, job, false);
+          await finishGeneration(services.db, reservation, false);
+        }
+      };
+    }
     let upstream;
     if (selected.provider === "gemini") {
       const result = await requestGemini(apiKey, prompt);
       upstream = result.upstream;
-      return await forwardStream(res, upstream, result.provider, result.model, result.controller, result.streamTimer, result.deadlineAt);
+      return await forwardStream(res, upstream, result.provider, result.model, result.controller, result.streamTimer, result.deadlineAt, billing);
     }
     if (selected.provider === "anthropic") {
       const result = await requestAnthropic(apiKey, prompt);
       upstream = result.upstream;
-      return await forwardStream(res, upstream, result.provider, result.model);
+      return await forwardStream(res, upstream, result.provider, result.model, null, null, null, billing);
     }
     const result = await requestOpenAICompatible(selected.provider, apiKey, prompt);
     upstream = result.upstream;
-    return await forwardStream(res, upstream, result.provider, result.model);
+    return await forwardStream(res, upstream, result.provider, result.model, null, null, null, billing);
   } catch (error) {
     if (error && error.message === "SETUP_REQUIRED") {
       return jsonError(res, 503, "Para usar chaves salvas em Integrações, configure FIREBASE_SERVICE_ACCOUNT_JSON e INTEGRATIONS_ENCRYPTION_KEY na Vercel. A chave GEMINI_API_KEY do servidor continua funcionando como alternativa automática.");
