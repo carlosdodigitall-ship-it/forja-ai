@@ -630,7 +630,7 @@ module.exports = async function handler(req, res) {
       catch (_) { error.recoveryPending = true; }
     }
     if (res.headersSent) {
-      try { res.write("data: " + JSON.stringify({ type:"error", error:"A geração foi interrompida." }) + "\\n\\n"); } catch (_) {}
+      try { res.write("data: " + JSON.stringify({ type:"error", error:"A geração foi interrompida." }) + "\n\n"); } catch (_) {}
       return res.end();
     }
     if (error && error.message === "SETUP_REQUIRED") {
