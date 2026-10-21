@@ -572,10 +572,10 @@ module.exports = async function handler(req, res) {
   if (prompt.length > 110000) return jsonError(res, 413, "O contexto do projeto ficou muito grande para uma edição automática. Faça uma alteração menor.");
   if (requested !== "auto" && !AI_PROVIDERS.includes(requested)) return jsonError(res, 400, "Provedor de IA não suportado.");
 
+  let billing = null;
   try {
     const selected = await resolveProvider(req, requested);
     const apiKey = selected.credentials.apiKey;
-    let billing = null;
     if (creditsEnabled()) {
       // Authenticated UID is derived from a verified Firebase token, never req.body.
       const verifiedUser = await verifyFirebaseIdToken(getBearer(req));
@@ -625,6 +625,14 @@ module.exports = async function handler(req, res) {
     upstream = result.upstream;
     return await forwardStream(res, upstream, result.provider, result.model, null, null, null, billing);
   } catch (error) {
+    if (billing && !billing.completed) {
+      try { await billing.fail(); }
+      catch (_) { error.recoveryPending = true; }
+    }
+    if (res.headersSent) {
+      try { res.write("data: " + JSON.stringify({ type:"error", error:"A geração foi interrompida." }) + "\\n\\n"); } catch (_) {}
+      return res.end();
+    }
     if (error && error.message === "SETUP_REQUIRED") {
       return jsonError(res, 503, "Para usar chaves salvas em Integrações, configure FIREBASE_SERVICE_ACCOUNT_JSON e INTEGRATIONS_ENCRYPTION_KEY na Vercel. A chave GEMINI_API_KEY do servidor continua funcionando como alternativa automática.");
     }
