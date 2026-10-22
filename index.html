@@ -401,6 +401,49 @@ html svg[fill="#FFFFFF"]{filter:none}
 @media(prefers-reduced-motion:reduce){
   html *,html *::before,html *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* Forgefy-inspired Forja dashboard refresh: light canvas, warm orange actions. */
+:root{color-scheme:light;--f-bg:#fffaf7;--f-surface:#fff;--f-surface-2:#fff4eb;--f-border:#eddfd4;--f-red:#f65b15;--f-red-dark:#ce4206;--f-text:#18151a;--f-muted:#736b72}
+html,html body{background:#fffaf7!important;color:#18151a!important}
+html body{background-image:radial-gradient(circle at 65% 0%,#fff0e2 0%,transparent 36%)!important}
+html main,html section,html article{color:#18151a!important}
+html h1,html h2,html h3{color:#19151a!important}
+html aside{background:linear-gradient(180deg,#251714,#1a1111)!important;border-right:1px solid #422b23!important;color:#fff7f0!important;box-shadow:6px 0 26px #25171412}
+html aside>div:first-child>div{background:linear-gradient(135deg,#ff933e,#f04c0c)!important;box-shadow:0 8px 26px #f65b1566!important}
+html aside>div:first-child>span:after{color:#fff!important}
+html aside nav a,html aside a{color:#eee3df!important}
+html aside nav a:hover,html aside nav a[aria-current="page"]{background:linear-gradient(90deg,#582816,#321b16)!important;border-color:#a74c22!important;color:#fff!important}
+html header{background:#fffaf7f0!important;border-color:#f0e7e1!important;color:#18151a!important}
+html button{background:#fff!important;color:#292126!important;border:1px solid #e9ded8!important;border-radius:12px!important;box-shadow:0 3px 9px #39231409!important}
+html button:hover{background:#fff2e9!important;border-color:#ffb38b!important}
+html button[aria-pressed="true"],html button[aria-selected="true"]{background:linear-gradient(135deg,#ff802e,#ef4e0b)!important;border-color:#f65b15!important;color:white!important}
+html input,html textarea,html select{background:#fff!important;color:#20191d!important;border:1px solid #e8dcd3!important;border-radius:13px!important}
+html input::placeholder,html textarea::placeholder{color:#8c8184!important}
+html input:focus,html textarea:focus,html select:focus{outline:2px solid #f65b15!important;outline-offset:2px!important;box-shadow:0 0 0 4px #ff7b2730!important}
+html a{color:#cb4a14!important}
+html [style*="background: #FFFFFF"],html [style*="background:#FFFFFF"],html [style*="background: #FFF"],html [style*="background:#FFF"],html [style*="background: white"]{background:#fff!important;color:#21191d!important;border-color:#eee2d9!important}
+html [style*="background: #FBF7F4"],html [style*="background:#FBF7F4"],html [style*="background: #F4EDE8"],html [style*="background:#F4EDE8"]{background:#fff6ef!important;color:#21191d!important;border-color:#f6e1d3!important}
+html [style*="border: 1px solid #E9DFD8"],html [style*="border:1px solid #E9DFD8"],html [style*="border-bottom: 1px solid #E9DFD8"],html [style*="border-right: 1px solid #E9DFD8"]{border-color:#ecdfd7!important}
+html [style*="color: #1C1417"],html [style*="color:#1C1417"],html [style*="color: #20191D"],html [style*="color:#20191D"]{color:#20191d!important}
+html [style*="color: #6B5D63"],html [style*="color:#6B5D63"]{color:#70666d!important}
+#forja-auth-overlay{background:radial-gradient(ellipse at 10% 0%,#ffe3cd,transparent 40%),#fffaf7!important;color:#20191d!important}
+#forja-auth-overlay>main{background:#fff!important;color:#20191d!important;border:1px solid #efdcd0!important;box-shadow:0 24px 80px #5b2e1524!important}
+#forja-auth-overlay h1,#forja-auth-overlay strong{color:#21191d!important}
+#forja-auth-overlay p,#forja-auth-overlay label{color:#675e60!important}
+#forja-auth-overlay input{background:#fff!important;color:#20191d!important;border-color:#ead8cf!important}
+#forja-auth-submit,#forja-build-chat-send{background:linear-gradient(135deg,#ff802e,#ed4b0a)!important;color:white!important;border-color:#e9500b!important;box-shadow:0 9px 22px #f65b1530!important}
+#forja-auth-switch{color:#d34a0c!important}
+#forja-account-chip{background:#fff!important;color:#241b1c!important;border-color:#eadbd3!important}
+#forja-preview-drawer{background:#fffaf7!important;color:#21191d!important;border-color:#eadbd3!important}
+#forja-preview-drawer header,#forja-build-chat>div:first-child,#forja-build-chat>div:last-child{background:#fff!important;border-color:#eee0d7!important}
+#forja-preview-workspace,#forja-preview-column{background:#f9f6f4!important}
+#forja-build-chat{background:#fff!important;border-color:#eadbd3!important}
+#forja-build-chat-messages{background:#fffaf7!important}
+#forja-build-chat .assistant{background:#fff3e9!important;color:#292025!important;border-color:#f3dac9!important}
+#forja-build-chat-input{background:#fff!important;border-color:#e8dcd3!important;color:#20191d!important}
+#forja-preview-status,#forja-preview-code{background:#fff!important;border-color:#e6d9d0!important;color:#282126!important}
+html button:focus-visible,html a:focus-visible{outline:3px solid #f65b15!important;outline-offset:3px!important}
+@media(max-width:760px){html aside{background:#251714!important;border-bottom:1px solid #543123!important}html main{background:#fffaf7!important}}
 </style>`;
 
     // Inject after <head> so the DOCTYPE stays first; prepending the script
