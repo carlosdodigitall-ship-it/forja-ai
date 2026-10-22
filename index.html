@@ -401,6 +401,31 @@ html svg[fill="#FFFFFF"]{filter:none}
 @media(prefers-reduced-motion:reduce){
   html *,html *::before,html *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* Forja Copper / Studio v2 */
+html,html body{background:#131115!important}
+html body{background:radial-gradient(circle at 80% 0%,rgba(249,115,22,.11),transparent 42%),#131115!important}
+html aside{background:linear-gradient(180deg,#241b18,#17151a)!important;border-color:#493428!important}
+html aside>div:first-child>div{background:linear-gradient(140deg,#ffb36b,#f97316 53%,#c2410c)!important;box-shadow:0 8px 22px rgba(249,115,22,.26)!important}
+html header{background:rgba(35,27,25,.95)!important;border-color:#483428!important}
+html nav a:hover,html nav a[aria-current="page"]{background:rgba(249,115,22,.14)!important;border-color:#68412b!important;color:#fff7ed!important}
+html a{color:#fdba74!important}
+html button[aria-pressed="true"],html button[aria-selected="true"]{background:linear-gradient(135deg,#fb923c,#c2410c)!important;border-color:#fb923c!important}
+html button:hover{border-color:#f97316!important}
+html input:focus,html textarea:focus{border-color:#fb923c!important;box-shadow:0 0 0 3px rgba(249,115,22,.18)!important}
+#forja-preview-drawer{background:#171416!important;border-color:#583927!important}
+#forja-preview-drawer header,#forja-build-chat>div:first-child,#forja-build-chat>div:last-child{background:#241b19!important;border-color:#513928!important}
+#forja-build-chat,#forja-build-chat-messages{background:#1e1919!important;border-color:#513928!important}
+#forja-build-chat .assistant{background:#2b2220!important;border-color:#60422f!important;color:#fff7ed!important}
+#forja-build-chat-input{background:#241d1b!important;border-color:#60422f!important;color:#fff7ed!important}
+#forja-build-chat-input:focus{border-color:#fb923c!important;box-shadow:0 0 0 3px rgba(249,115,22,.18)!important}
+#forja-build-chat-send{background:linear-gradient(135deg,#fb923c,#ea580c)!important;border-color:#fb923c!important}
+#forja-preview-status{background:radial-gradient(circle at 50% 0%,#372217,#1c191b 75%)!important;border-color:#513928!important}
+#forja-preview-workspace,#forja-preview-column{background:#191619!important}
+#forja-preview-drawer button:focus-visible{outline:2px solid #fb923c!important;outline-offset:3px}
+@media(min-width:900px){#forja-preview-drawer{width:100vw!important;max-width:100vw!important}#forja-build-chat{flex:0 0 clamp(410px,39vw,660px)!important;width:clamp(410px,39vw,660px)!important;max-width:49%!important}#forja-build-chat-messages{padding:22px!important}#forja-build-chat-input{min-height:108px!important;max-height:220px!important;font-size:14px!important}}
+@media(min-width:761px) and (max-width:899px){#forja-build-chat{flex:0 0 44%!important;width:44%!important;max-width:44%!important}}
+@media(max-width:760px){#forja-build-chat{flex:0 0 46%!important;max-height:55%!important;min-height:225px!important}#forja-preview-workspace{flex-direction:column-reverse!important}}
 </style>`;
 
     // Inject after <head> so the DOCTYPE stays first; prepending the script
