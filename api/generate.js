@@ -3,7 +3,7 @@ const { executeBilledGeneration } = require("../lib/ai/billed-generation");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 
-const AI_PROVIDERS = ["gemini", "openai", "anthropic", "groq", "openrouter"];
+const AI_PROVIDERS = ["openai", "gemini", "anthropic", "groq", "openrouter"];
 
 const SYSTEM_INSTRUCTION = [
   "Você é o mecanismo de geração de aplicativos da Forja AI.",
@@ -177,11 +177,11 @@ async function resolveProvider(req, requested) {
     if (requested !== "auto" && environmentKeys[requested]) {
       return { provider: requested, credentials: { apiKey: environmentKeys[requested] }, fromEnvironment: true };
     }
-    if (requested === "auto" && environmentKeys.gemini) {
-      return { provider: "gemini", credentials: { apiKey: environmentKeys.gemini }, fromEnvironment: true };
-    }
     if (requested === "auto" && environmentKeys.openai) {
       return { provider: "openai", credentials: { apiKey: environmentKeys.openai }, fromEnvironment: true };
+    }
+    if (requested === "auto" && environmentKeys.gemini) {
+      return { provider: "gemini", credentials: { apiKey: environmentKeys.gemini }, fromEnvironment: true };
     }
     throw new Error("SETUP_REQUIRED");
   }
@@ -193,11 +193,11 @@ async function resolveProvider(req, requested) {
     if (requested !== "auto" && environmentKeys[requested]) {
       return { provider: requested, credentials: { apiKey: environmentKeys[requested] }, fromEnvironment: true };
     }
-    if (requested === "auto" && environmentKeys.gemini) {
-      return { provider: "gemini", credentials: { apiKey: environmentKeys.gemini }, fromEnvironment: true };
-    }
     if (requested === "auto" && environmentKeys.openai) {
       return { provider: "openai", credentials: { apiKey: environmentKeys.openai }, fromEnvironment: true };
+    }
+    if (requested === "auto" && environmentKeys.gemini) {
+      return { provider: "gemini", credentials: { apiKey: environmentKeys.gemini }, fromEnvironment: true };
     }
     throw new Error("SETUP_REQUIRED");
   }
@@ -228,8 +228,8 @@ async function resolveProvider(req, requested) {
     e.status = 400;
     throw e;
   }
-  if (environmentKeys.gemini) return { provider: "gemini", credentials: { apiKey: environmentKeys.gemini }, fromEnvironment: true };
   if (environmentKeys.openai) return { provider: "openai", credentials: { apiKey: environmentKeys.openai }, fromEnvironment: true };
+  if (environmentKeys.gemini) return { provider: "gemini", credentials: { apiKey: environmentKeys.gemini }, fromEnvironment: true };
   const e = new Error("Nenhum provedor de IA conectado. Conecte Gemini, OpenAI, Anthropic, Groq ou OpenRouter em Integrações.");
   e.status = 400;
   throw e;
