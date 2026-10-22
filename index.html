@@ -1986,59 +1986,6 @@ html input:focus,html textarea:focus{border-color:#fb923c!important;box-shadow:0
     });
     wrap.append(label,select);
     textarea.parentNode.insertBefore(wrap,textarea);
-    // Conversation-first onboarding: preserve the original generation form and its events.
-    if (!document.getElementById("forja-ideas-intro")) {
-      var style = document.createElement("style");
-      style.id = "forja-ideas-style";
-      style.textContent = `
-        #forja-ideas-intro{max-width:760px;width:100%;margin:6px auto 22px;text-align:center;color:#fff7ed;font-family:Inter,system-ui,sans-serif}
-        #forja-ideas-intro .fi-kicker{display:inline-flex;align-items:center;gap:8px;border:1px solid #7c4929;border-radius:99px;padding:7px 13px;background:rgba(249,115,22,.12);color:#fdba74;font-size:12px;font-weight:750}
-        #forja-ideas-intro h2{font-size:clamp(27px,4vw,43px)!important;line-height:1.13;letter-spacing:-.045em;margin:19px 0 12px;color:#fff7ed!important}
-        #forja-ideas-intro p{font-size:15px;line-height:1.65;color:#d6c1b4;max-width:560px;margin:0 auto}
-        #forja-idea-suggestions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:760px;width:100%;margin:18px auto 0}
-        #forja-idea-suggestions button{display:inline-flex;align-items:center;gap:8px;background:#251f1c!important;border:1px solid #644330!important;border-radius:999px!important;color:#fff2e9!important;padding:11px 14px!important;font-size:12px;font-weight:700;cursor:pointer;min-height:43px}
-        #forja-idea-suggestions button:hover,#forja-idea-suggestions button:focus-visible{background:#423026!important;border-color:#fb923c!important;outline-offset:2px}
-        textarea[aria-label="Descreva seu app"]{min-height:105px!important;width:100%!important;font-size:17px!important;line-height:1.6!important;resize:vertical!important;color:#fff7ed!important;background:#211a19!important;border:0!important}
-        #forja-ai-model-picker{color:#f6cda9!important;gap:10px!important}
-        #forja-ai-provider-select{background:#231c1a!important;color:#fff7ed!important;border:1px solid #755039!important}
-        @media(max-width:600px){#forja-ideas-intro{padding:0 12px;margin-bottom:14px}#forja-idea-suggestions{padding:0 12px;gap:8px}#forja-idea-suggestions button{flex:1 1 45%;justify-content:center;font-size:11px;padding:10px!important}}
-      `;
-      document.head.appendChild(style);
-      var intro = document.createElement("section");
-      intro.id = "forja-ideas-intro";
-      var kicker = document.createElement("span");
-      kicker.className = "fi-kicker";
-      kicker.textContent = "✦  Sua ideia começa aqui";
-      var heading = document.createElement("h2");
-      heading.textContent = "O que vamos construir hoje?";
-      var hint = document.createElement("p");
-      hint.textContent = "Descreva sua ideia como numa conversa. A Forja transforma seu pedido em uma aplicação e abre o editor com chat, código e prévia.";
-      intro.append(kicker,heading,hint);
-      wrap.parentNode.insertBefore(intro,wrap);
-      textarea.placeholder = "Ex.: Crie um sistema para meu pet shop, com clientes, agendamentos, estoque e uma dashboard moderna...";
-      var suggestions = document.createElement("div");
-      suggestions.id = "forja-idea-suggestions";
-      var ideas = [
-        ["✦","Criar um SaaS","Crie um SaaS com landing page, cadastro, login e dashboard de gestão responsiva."],
-        ["▦","Dashboard de gestão","Crie uma dashboard de gestão com indicadores, gráficos, filtros e lista de clientes."],
-        ["◈","Landing page","Crie uma landing page profissional com benefícios, depoimentos, planos e chamada para ação."],
-        ["⌘","Aplicativo de serviços","Crie um aplicativo de agendamentos com cadastro de clientes, serviços e calendário."]
-      ];
-      ideas.forEach(function(idea){
-        var b=document.createElement("button");
-        b.type="button";
-        b.textContent=idea[0]+"  "+idea[1];
-        b.addEventListener("click",function(){
-          textarea.value=idea[2];
-          textarea.dispatchEvent(new Event("input",{bubbles:true}));
-          textarea.focus();
-          textarea.setSelectionRange(textarea.value.length,textarea.value.length);
-        });
-        suggestions.appendChild(b);
-      });
-      var editor = textarea.parentNode.parentNode;
-      if (editor && editor.parentNode) editor.parentNode.insertBefore(suggestions,editor.nextSibling);
-    }
     refreshOptions(select);
   }
   async function refreshOptions(select) {
