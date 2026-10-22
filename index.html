@@ -674,6 +674,56 @@ html button:focus-visible,html a:focus-visible{outline:3px solid #f65b15!importa
 #forja-preview-drawer button:focus-visible,#forja-build-chat-input:focus-visible{outline:2px solid #df4857;outline-offset:2px}
 @media(max-width:900px){#forja-build-chat{flex-basis:320px;width:320px;max-width:42%}}
 @media(max-width:760px){#forja-preview-drawer{width:100vw}#forja-preview-workspace{flex-direction:column-reverse}#forja-build-chat{flex:0 0 43%;width:100%;max-width:none;min-height:230px;border-right:0;border-top:1px solid #2b2c33}#forja-build-chat-messages{padding:10px;gap:9px}#forja-build-chat-input{min-height:46px;max-height:100px}#forja-preview-status{margin:8px;padding:16px;min-height:140px}#forja-preview-drawer header{padding:10px 12px}#forja-preview-drawer header div{max-width:58vw}#forja-preview-drawer header div div:first-child{font-size:16px}#forja-preview-drawer button{font-size:12px;padding:8px 9px}#forja-preview-drawer textarea{margin:8px;width:calc(100% - 16px)}.forja-quick-actions{padding:0 8px 8px;gap:5px}.forja-quick-action{font-size:10px;padding:6px 8px}}
+
+/* Editor redesign 2026-10-22: override old inline layout without replacing its working handlers. */
+#forja-preview-overlay{background:rgba(29,18,13,.38)!important}
+#forja-preview-drawer{width:min(1640px,100vw)!important;background:#faf8f6!important;color:#201819!important;box-shadow:-16px 0 70px #23100b30!important}
+#forja-preview-drawer>header{background:#fff!important;color:#211a1d!important;padding:17px 25px!important;border-bottom:1px solid #efe6df!important;min-height:68px!important}
+#forja-preview-drawer>header div div:first-child{color:#21191c!important;font-size:16px!important}
+#forja-preview-drawer>header div div:last-child{color:#746b72!important}
+#forja-preview-drawer>div:nth-child(2){background:#211916!important;border:0!important;margin:12px 16px!important;border-radius:17px!important;padding:12px 15px!important;gap:9px!important;box-shadow:0 8px 24px #22130c19!important}
+#forja-preview-drawer>div:nth-child(2) button{background:#302a2b!important;color:#fff!important;border:1px solid #544541!important;border-radius:12px!important;padding:10px 16px!important;font-size:12px!important;font-weight:700!important;min-height:42px!important}
+#forja-preview-drawer>div:nth-child(2) button:hover{background:#523327!important;border-color:#f77d38!important}
+#forja-preview-drawer>div:nth-child(2) button:first-child,#forja-preview-drawer>div:nth-child(2) button:last-child{background:linear-gradient(135deg,#ff8739,#ef4c0c)!important;color:#fff!important;border-color:#f46b22!important}
+#forja-preview-workspace{background:#faf8f6!important;padding:0 16px 16px!important;gap:14px!important}
+#forja-build-chat{background:#fff!important;color:#231a1c!important;flex:0 0 390px!important;width:390px!important;max-width:42%!important;border:1px solid #ece1db!important;border-radius:18px!important;overflow:hidden!important;box-shadow:0 9px 28px #4023190c!important}
+#forja-build-chat>div:first-child{background:#fff!important;border-color:#f1e7e0!important;padding:16px 18px!important}
+#forja-build-chat>div:first-child strong{color:#251b1e!important;font-size:16px!important}
+#forja-build-chat>div:first-child span{color:#7d7378!important}
+#forja-build-chat-messages{background:#fff!important;padding:16px!important;gap:12px!important}
+#forja-build-chat .forja-build-bubble{font-size:13px!important;line-height:1.6!important;border-radius:17px!important;padding:13px 15px!important;box-shadow:0 3px 12px #1f151008!important}
+#forja-build-chat .assistant{background:#fff2e9!important;border:1px solid #ffdfcb!important;color:#302427!important}
+#forja-build-chat .user{background:linear-gradient(135deg,#ff863e,#eb4b0b)!important;border-color:#ef6e2b!important;color:#fff!important}
+#forja-build-chat .forja-chat-meta{color:#80767c!important}
+.forja-quick-actions{background:#fff!important;padding:10px 12px!important;gap:6px!important;border-top:1px solid #f4ece7!important}
+.forja-quick-action{background:#fff!important;color:#45383c!important;border:1px solid #e9ded8!important;border-radius:999px!important;padding:9px 10px!important;font-size:11px!important}
+.forja-quick-action:hover{border-color:#ff823b!important;background:#fff1e8!important;color:#bf3b09!important}
+#forja-build-chat>div:last-child{background:#fff!important;border-top:1px solid #eee4dd!important;padding:13px!important}
+#forja-build-chat-input{background:#fff!important;color:#2a2225!important;border:1px solid #eaded8!important;border-radius:13px!important;min-height:86px!important;resize:none!important;padding:14px!important;box-shadow:0 2px 12px #301a0a0b!important;font-size:13px!important}
+#forja-build-chat-input:focus{outline:2px solid #f26924!important;outline-offset:1px!important;border-color:#f26924!important}
+#forja-build-chat-send{background:linear-gradient(135deg,#ff8035,#ef4f0d)!important;border:0!important;color:#fff!important;border-radius:12px!important;width:46px!important;height:46px!important;box-shadow:0 7px 18px #f25c1938!important}
+#forja-preview-column{background:#fff!important;border:1px solid #eee5de!important;border-radius:18px!important;box-shadow:0 9px 28px #4023190c!important;min-width:0!important}
+#forja-preview-status{background:radial-gradient(circle at 50% 32%,#fff1e7,#fff 60%)!important;color:#2b2227!important;border:1px solid #f1e6de!important;border-radius:18px!important;box-shadow:none!important;margin:13px!important;padding:24px!important}
+#forja-preview-status h1,#forja-preview-status h2,#forja-preview-status h3{color:#221b22!important}
+#forja-preview-status p,#forja-preview-status small{color:#766c76!important}
+#forja-preview-stage{background:#f5f1ee!important}
+#forja-preview-code{background:#211b20!important;color:#f3e8e2!important;border-color:#45363a!important;border-radius:14px!important}
+#forja-preview-drawer button:focus-visible,#forja-build-chat-input:focus-visible{outline:3px solid #ff7a2a!important;outline-offset:2px!important}
+@media(max-width:1000px){#forja-build-chat{flex-basis:340px!important;width:340px!important;max-width:44%!important}}
+@media(max-width:760px){
+#forja-preview-drawer{width:100vw!important;max-width:100vw!important}
+#forja-preview-drawer>header{min-height:54px!important;padding:10px 14px!important}
+#forja-preview-drawer>div:nth-child(2){margin:7px!important;border-radius:12px!important;flex-wrap:nowrap!important;overflow-x:auto!important;padding:8px!important}
+#forja-preview-drawer>div:nth-child(2) button{flex-shrink:0!important;min-height:38px!important;padding:8px 12px!important}
+#forja-preview-workspace{flex-direction:column-reverse!important;gap:8px!important;padding:0 8px 8px!important}
+#forja-build-chat{flex:0 0 44%!important;width:100%!important;max-width:100%!important;min-height:190px!important;border:1px solid #ece1db!important}
+#forja-preview-column{min-height:190px!important}
+#forja-preview-status{margin:7px!important;min-height:140px!important;padding:12px!important}
+#forja-build-chat-messages{padding:10px!important}
+#forja-build-chat-input{min-height:48px!important;max-height:100px!important}
+}
+@media(prefers-reduced-motion:reduce){#forja-preview-drawer *,#forja-preview-drawer{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
 `;
 
     document.head.appendChild(loaderStyle);
