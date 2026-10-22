@@ -633,6 +633,16 @@ html input:focus,html textarea:focus{border-color:#fb923c!important;box-shadow:0
     loaderStyle.textContent = `
 @keyframes forja-progress{from{transform:translateX(-45%);width:38%}to{transform:translateX(165%);width:58%}}
 #forja-preview-workspace{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden;background:#101115}
+#forja-studio-sidebar{display:flex;flex:0 0 214px;width:214px;flex-direction:column;gap:8px;padding:20px 12px;background:linear-gradient(180deg,#251a16,#18171c);border-right:1px solid #493427;color:#fff4e9;min-height:0;overflow:auto}
+.forja-studio-brand{display:flex;align-items:center;gap:10px;padding:8px 10px 26px;font-size:19px;letter-spacing:-.04em}
+.forja-studio-mark{display:grid;place-items:center;border-radius:12px;width:36px;height:36px;background:linear-gradient(135deg,#ffb057,#f97316,#be360b);font-size:27px;color:white;box-shadow:0 7px 20px rgba(249,115,22,.24)}
+#forja-studio-sidebar .forja-studio-nav-link{display:block;text-align:left;width:100%;padding:12px!important;border-radius:12px!important;background:transparent!important;border:1px solid transparent!important;color:#e9d7cd!important;font-size:13px!important;cursor:pointer}
+#forja-studio-sidebar .forja-studio-nav-link:hover,#forja-studio-sidebar .forja-studio-nav-link.is-current{background:rgba(249,115,22,.13)!important;border-color:rgba(249,115,22,.25)!important;color:#fff!important}
+.forja-studio-note{margin:auto 8px 4px;color:#c1a99b;font-size:11px;line-height:1.65}
+@media(min-width:900px){#forja-build-chat{flex:0 0 clamp(390px,36vw,620px)!important;width:clamp(390px,36vw,620px)!important;max-width:calc(100vw - 480px)!important}}
+@media(max-width:1100px){#forja-studio-sidebar{flex-basis:70px;width:70px;padding:12px 5px}.forja-studio-brand strong,.forja-studio-note{display:none}#forja-studio-sidebar .forja-studio-nav-link{font-size:11px!important;line-height:1.5!important;padding:9px 5px!important;overflow-wrap:anywhere;text-align:center}}
+@media(max-width:760px){#forja-studio-sidebar{display:none!important}}
+
 #forja-preview-column{display:flex;flex:1 1 auto;flex-direction:column;min-width:0;min-height:0;overflow:hidden;background:#111216}
 #forja-build-chat{display:flex;flex:0 0 370px;width:370px;max-width:40%;flex-direction:column;min-height:0;border-right:1px solid #2b2c33;background:#15161b;color:#f2f2f6}
 #forja-build-chat-messages{flex:1;min-height:0;overflow:auto;padding:18px 15px;display:flex;flex-direction:column;gap:14px;background:linear-gradient(180deg,#15161b 0%,#121317 100%);scroll-behavior:smooth}
@@ -724,7 +734,40 @@ html input:focus,html textarea:focus{border-color:#fb923c!important;box-shadow:0
       quickActions.appendChild(quick);
     });
     chatColumn.append(chatHeader, chatMessages, quickActions, chatForm);
-    workspace.append(chatColumn, previewColumn);
+    // Studio sidebar: actions reuse the existing editor instead of mocked history.
+    var studioNav = document.createElement("nav");
+    studioNav.id = "forja-studio-sidebar";
+    studioNav.setAttribute("aria-label", "Navegação do editor");
+    var brand = document.createElement("div");
+    brand.className = "forja-studio-brand";
+    var markIcon = document.createElement("span");
+    markIcon.className = "forja-studio-mark";
+    markIcon.textContent = "ϟ";
+    markIcon.setAttribute("aria-hidden","true");
+    var brandText = document.createElement("strong");
+    brandText.textContent = "Forja AI";
+    brand.append(markIcon,brandText);
+    studioNav.appendChild(brand);
+    var sidebarActions = [
+      ["✦  Novo projeto",function(){closeDrawer();var field=document.querySelector('textarea[aria-label="Descreva seu app"]');if(field)field.focus();}],
+      ["▣  Conversa",function(){chatInput.focus();}],
+      ["◫  Prévia",function(){showTab("preview");}],
+      ["⌘  Código HTML",function(){showTab("code");}],
+      ["↓  Baixar projeto",function(){download.click();}]
+    ];
+    sidebarActions.forEach(function(item,index){
+      var action = document.createElement("button");
+      action.type = "button";
+      action.className = "forja-studio-nav-link" + (index===1?" is-current":"");
+      action.textContent = item[0];
+      action.addEventListener("click",item[1]);
+      studioNav.appendChild(action);
+    });
+    var studioNote = document.createElement("p");
+    studioNote.className = "forja-studio-note";
+    studioNote.textContent = "Seu projeto é criado por conversa. Acompanhe o código e a prévia aqui.";
+    studioNav.appendChild(studioNote);
+    workspace.append(studioNav,chatColumn,previewColumn);
     panel.append(header, toolbar, workspace);
 
     var buildChatHistory = [];
